@@ -1,0 +1,11 @@
+.idea
+.idea_modules
+target
+project/boot
+*.swp
+project.vim
+tags
+.lib
+*~
+*#
+z_local.sbt
