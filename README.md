@@ -1,1 +1,1 @@
-An exploration of (Scala macros)[http://scala-macros.org).
+An exploration of [Scala macros](http://scala-macros.org).
