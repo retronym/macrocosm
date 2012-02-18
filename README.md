@@ -27,4 +27,14 @@ scala> assert2("foo".reverse == "off")
 java.lang.AssertionError: assertion failed: assert2("foo".reverse == "off")
 	at scala.Predef$.assert(Predef.scala:161)
 	at .<init>(<console>:10)
+
+scala> def plus(a: Int, b: Int) = a + b
+plus: (a: Int, b: Int)Int
+
+scala> trace(plus(1, plus(2, plus(3, 4))))
+$line1.$read.$iw.$iw.plus(3, 4) = 7
+$line1.$read.$iw.$iw.plus(2, $line1.$read.$iw.$iw.plus(3, 4)) = 9
+$line1.$read.$iw.$iw.plus(1, $line1.$read.$iw.$iw.plus(2, $line1.$read.$iw.$iw.plus(3, 4))) = 10
+res0: Int = 10
+
 ```

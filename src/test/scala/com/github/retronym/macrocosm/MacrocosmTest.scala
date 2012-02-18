@@ -19,7 +19,8 @@ object MacrocosmTest extends App {
   }
   
   def plus(a: Int, b: Int) = a + b
-  println(showTree(plus(1, 2)))
+  //println(showTree(plus(1, 2)))
 
-  println(decompose(plus(1, 2)))
+  val i: Int = trace(plus(1, plus(2, 3)))
+  //trace("foo".toString.toString) 
 }
