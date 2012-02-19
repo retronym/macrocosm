@@ -22,5 +22,6 @@ object MacrocosmTest extends App {
   //println(showTree(plus(1, 2)))
 
   val i: Int = trace(plus(1, plus(2, 3)))
-  //trace("foo".toString.toString) 
+  
+  //trace("foo".toString.toString)
 }
