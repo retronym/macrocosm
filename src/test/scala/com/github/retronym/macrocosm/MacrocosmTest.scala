@@ -23,5 +23,7 @@ object MacrocosmTest extends App {
 
   val i: Int = trace(plus(1, plus(2, 3)))
   
-  //trace("foo".toString.toString)
+  trace("foo".toString.toString)
+
+  trace(Nil.reverse.reverse) // TODO trace Select(qual, name)
 }

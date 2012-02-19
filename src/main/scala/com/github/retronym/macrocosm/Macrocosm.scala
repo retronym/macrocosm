@@ -41,7 +41,7 @@ object Macrocosm {
             val sub = Apply(transform(qual), args.map(a => transform(a)))
             Block(
               List(
-                new _context.ValDef(Modifiers(), tempValName, TypeTree(sub.tpe), sub),       
+                new _context.ValDef(Modifiers(), tempValName, TypeTree(), sub),       
                 Apply(predefPrint, List(stringLit(show(a) + " = "))),
                 Apply(predefPrintln, List(Ident(tempValName)))
               ),
@@ -51,7 +51,7 @@ object Macrocosm {
         }
       }
     }
-    val t = tracingTransformer.transform(c)
+    val t = tracingTransformer.transform(resetAllAttrs(c))
     //println("t = " + t)
     t
   }
@@ -65,6 +65,21 @@ object Macrocosm {
     import context._
     
     def id(a: Tree): Tree = a 
+
+    // The first version of the trace macro did not call this, which led to NSDNHO
+    // errors with `trace(1.toString.toString)`.
+    //
+    // Explanation from Eugene:
+    //
+    // The trouble was with the fact that the tree produced by trace(1.toString.toString)
+    // was partially typed. And when some AST already has a type, typer doesn't drill into
+    // its children and just moves along. Consequently, newly generated valdefs were never
+    // processed by the typer, i.e. never got symbols assigned to them, hence the NSDNHO.
+    def resetAllAttrs(a: Tree): Tree = {
+      val global = context.asInstanceOf[scala.tools.nsc.Global]
+      global.resetAllAttrs(a.asInstanceOf[global.Tree])
+             .asInstanceOf[Tree]
+    }
      
     def predefAssert: Tree =
       predefSelect("assert")
