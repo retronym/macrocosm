@@ -14,7 +14,7 @@ Type :help for more information.
 scala> import com.github.retronym.macrocosm.Macrocosm._
 import com.github.retronym.macrocosm.Macrocosm._
 
-scala> showTree("foo".map(_ + 1))
+scala> desugar("foo".map(_ + 1))
 res0: String = scala.this.Predef.augmentString("foo").map[Int, Any](((x$1: Char) => x$1.+(1)))(scala.this.Predef.fallbackStringCanBuildFrom[Int])
 
 scala> assert1("foo".reverse == "off")

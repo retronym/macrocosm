@@ -3,7 +3,7 @@ package com.github.retronym.macrocosm
 object MacrocosmTest extends App {
   import Macrocosm._
 
-  val s = showTree(List(1, 2, 3).reverse) 
+  val s = desugar(List(1, 2, 3).reverse) 
   println(s) // immutable.this.List.apply[Int](1, 2, 3).reverse
 
   try {
@@ -19,11 +19,10 @@ object MacrocosmTest extends App {
   }
   
   def plus(a: Int, b: Int) = a + b
-  //println(showTree(plus(1, 2)))
 
   val i: Int = trace(plus(1, plus(2, 3)))
   
   trace("foo".toString.toString)
 
-  trace(Nil.reverse.reverse) // TODO trace Select(qual, name)
+  trace(List(1, 2).reverse.reverse)
 }

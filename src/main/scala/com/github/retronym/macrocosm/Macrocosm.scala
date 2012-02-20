@@ -1,19 +1,29 @@
 package com.github.retronym.macrocosm
 
 object Macrocosm {
-  def macro showTree(a: Any): String = {
+  /**
+   * @return the tree of `a` after the typer, printed as source code.
+   */
+  def macro desugar(a: Any): String = {
     val util = Util(_context); import util._    
 
     val s = show(a: Tree)
     stringLit(s)
   }
 
+  /**
+   * Assert that `c` is true. The tree of `c` is used as the assertion message.
+   */
   def macro assert1(c: Boolean) = {
     val util = Util(_context); import util._
 
     Apply(predefAssert, List[Tree](c, stringLit(show(c))))
   }
 
+  /**
+   * Assert that `c` is true. The line of source code from the caller is used
+   * as the assertion message.
+   */
   def macro assert2(c: Boolean) = {
     val util = Util(_context); import util._    
     val cTree: Tree = c
@@ -29,6 +39,10 @@ object Macrocosm {
   }
 
 
+  /**
+   * Trace execution on `c`, by printing the values of sub-expressions
+   * to standard out.
+   */
   def macro trace(c: Any) = {
     val util = Util(_context); import util._    
     object tracingTransformer extends Transformer {
@@ -36,24 +50,42 @@ object Macrocosm {
       override def transform(tree: Tree): Tree = {        
         tree match {
           case a @ Apply(qual, args) =>
-            val tempValName = newTermName(nextName)
-            //val tempValSymbol = newValue(tempValName)
+            val tempValName = newTermName(nextName)            
             val sub = Apply(transform(qual), args.map(a => transform(a)))
             Block(
               List(
-                new _context.ValDef(Modifiers(), tempValName, TypeTree(), sub),       
+                ValDef(Modifiers(), tempValName, TypeTree(), sub),       
                 Apply(predefPrint, List(stringLit(show(a) + " = "))),
                 Apply(predefPrintln, List(Ident(tempValName)))
               ),
               Ident(tempValName)
             )
+          case a @ Select(qual, name) if name.isTermName =>
+            val tempValName = newTermName(nextName)                        
+            val sub = Select(transform(qual), name)
+            a.tpe match {
+              case MethodType(_, _) | PolyType(_, _) => 
+                // qual.meth(...)
+                // \-------/
+                //    don't trace this part.
+                sub
+              case _ => 
+                Block(
+                  List(
+                    ValDef(Modifiers(), tempValName, TypeTree(), sub),       
+                    Apply(predefPrint, List(stringLit(show(a) + " = "))),
+                    Apply(predefPrintln, List(Ident(tempValName)))
+                  ),
+                  Ident(tempValName)
+                )
+            }            
           case _ => super.transform(tree)
         }
       }
     }
-    val t = tracingTransformer.transform(resetAllAttrs(c))
+    val t = tracingTransformer.transform(c)
     //println("t = " + t)
-    t
+    resetAllAttrs(t)
   }
   
 
