@@ -21,6 +21,24 @@ object Macrocosm {
   }
 
   /**
+   * ```
+   * log("".isEmpty) // prints: "".isEmpty = true
+   * ```
+   */
+  def macro log(a: Any) = {
+    val util = Util(_context); import util._
+    val tempValName = newTermName("$value")
+    Block(
+      List(
+        ValDef(Modifiers(), tempValName, TypeTree(), a),       
+        Apply(predefPrint, List(stringLit(show(a) + " = "))),
+        Apply(predefPrintln, List(Ident(tempValName)))
+      ),
+      Ident(tempValName)
+    )
+  }
+
+  /**
    * Assert that `c` is true. The line of source code from the caller is used
    * as the assertion message.
    */
@@ -33,7 +51,7 @@ object Macrocosm {
   }
 
   private var count = 0
-  def nextName() = {
+   def nextName() = {
     count += 1
     "i$" + count
   }
@@ -122,14 +140,10 @@ object Macrocosm {
     def predefPrint: Tree =
       predefSelect("print")
 
-    def predefSelect(name: String): Tree = {
-      import context._
+    def predefSelect(name: String): Tree =
       Select(Select(Ident(newTermName("scala")), newTermName("Predef")), newTermName(name))
-    }
 
-    def stringLit(s: String): Tree = {
-      import context._
+    def stringLit(s: String): Tree =
       Literal(Constant(s))
-    }
   }
 }

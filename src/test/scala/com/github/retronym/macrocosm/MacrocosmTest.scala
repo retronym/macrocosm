@@ -6,6 +6,8 @@ object MacrocosmTest extends App {
   val s = desugar(List(1, 2, 3).reverse) 
   println(s) // immutable.this.List.apply[Int](1, 2, 3).reverse
 
+  val b: Boolean = log("".isEmpty) // prints "".isEmpty() = true
+  
   try {
     assert1("boo".reverse == "obb") 
   } catch {
