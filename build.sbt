@@ -8,7 +8,7 @@ seq(npSettings: _*)
 
 scalaVersion := "2.10.0-SNAPSHOT"
 
-scalacOptions ++= Seq("-Xmacros", "-unchecked", "-Yvirtpatmat")
+scalacOptions ++= Seq("-Xmacros", "-unchecked", "-Yvirtpatmat", "-Xexperimental")
 
 resolvers += "sonatype snapshots" at "https://oss.sonatype.org/content/repositories/snapshots"
 

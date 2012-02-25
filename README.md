@@ -41,4 +41,11 @@ $line1.$read.$iw.$iw.plus(2, $line1.$read.$iw.$iw.plus(3, 4)) = 9
 $line1.$read.$iw.$iw.plus(1, $line1.$read.$iw.$iw.plus(2, $line1.$read.$iw.$iw.plus(3, 4))) = 10
 res3: Int = 10
 
+scala> b"102"
+<console>:11: error: exception during macro expansion: invalid binary literal
+              b"102"
+              ^
+scala> b"101010"
+res4: Int = 42
+
 ```
