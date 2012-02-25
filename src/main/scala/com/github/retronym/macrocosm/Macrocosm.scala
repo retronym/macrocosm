@@ -101,6 +101,30 @@ object Macrocosm {
   }
 
   /**
+   * Statically checked version of `"some([Rr]egex)".r`.
+   * Invalid regular expressions trigger a compile failure.
+   * At runtime, the regex is parsed again.
+   *
+   * {{{
+   *  scala> regex(".*")
+   * res0: scala.util.matching.Regex = .*
+   *
+   * scala> regex("{")
+   * <console>:11: error: exception during macro expansion: Illegal repetition
+   * {
+   *           regex("{")
+   *                ^
+   * }}}
+   */
+  def macro regex(s: String): scala.util.matching.Regex = {
+      s match {
+        case Literal(Constant(string: String)) =>
+          string.r // just to check
+        Select(s, "r")
+      }
+  }
+
+  /**
    * Trace execution on `c`, by printing the values of sub-expressions
    * to standard out.
    */

@@ -6,7 +6,7 @@ Here's what we've got so far:
 > console
 [info] Compiling 1 Scala source to /Users/jason/code/scala-spock/target/scala-2.10.0-SNAPSHOT/classes...
 [info] Starting scala interpreter...
-[info] 
+[info]
 Welcome to Scala version 2.10.0-M1-0362-g2fe570291a-2012-02-18 (Java HotSpot(TM) 64-Bit Server VM, Java 1.6.0_29).
 Type in expressions to have them evaluated.
 Type :help for more information.
@@ -41,11 +41,21 @@ $line1.$read.$iw.$iw.plus(2, $line1.$read.$iw.$iw.plus(3, 4)) = 9
 $line1.$read.$iw.$iw.plus(1, $line1.$read.$iw.$iw.plus(2, $line1.$read.$iw.$iw.plus(3, 4))) = 10
 res3: Int = 10
 
+scala> b"101010"
+res4: Int = 42
+
 scala> b"102"
 <console>:11: error: exception during macro expansion: invalid binary literal
               b"102"
               ^
-scala> b"101010"
-res4: Int = 42
+
+scala> regex(".*")
+res0: scala.util.matching.Regex = .*
+
+scala> regex("{")
+<console>:11: error: exception during macro expansion: Illegal repetition
+{
+              regex("{")
+                   ^
 
 ```
