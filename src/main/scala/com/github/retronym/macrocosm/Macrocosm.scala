@@ -240,6 +240,93 @@ object Macrocosm {
     resetAllAttrs(b)
   }
 
+  /**
+   * Fast, indexed, foreach over an array, translated to a while loop.
+   *
+   * {{{
+   *  arrayForeachWithIndex(as)((a, i) => println((a, i)))
+   * }}}
+   *
+   * Translated to:
+   * {{{
+   * {
+   *  def $f(a: Int, i: Int) = println((a, i));
+   *  val array = as
+   *  var i = 0
+   *  val len = array.length
+   *  while (i < len) {
+   *    val a = array.apply(i)
+   *    $f(a, i);
+   *    i += 1
+   *  }
+   * }
+   * }}}
+   */
+  def macro arrayForeachWithIndex[A](array: Array[A])(f: (A, Int) => Unit) = {
+    val util = Util(_context); import util._
+
+    val methodName = newTermName("$f")
+
+    val b = Block(
+      List(
+        // Convert the function literal into a local method.
+        f match {
+          case Function(List(p @ ValDef(_, _, TypeTree(paramType), _), p2), body)  =>
+            DefDef(Modifiers(), methodName, List(), List(List(p, p2)), TypeTree(), body)
+          case _ =>  sys.error("parameter `f` must be a funtcion literal.")
+        },
+        ValDef(
+          Modifiers(),
+          newTermName("array"),
+          TypeTree(),
+          array
+        ),
+        ValDef(
+          Modifiers(Set(reflect.api.Modifier.mutable)),
+          newTermName("i"),
+          TypeTree(),
+          Literal(Constant(0))
+        ),
+        ValDef(
+          Modifiers(),
+          newTermName("len"),
+          TypeTree(),
+          Select(Ident(newTermName("array")), newTermName("length"))
+        )
+      ),
+      LabelDef(
+        newTermName("while$1"),
+        List(),
+        If(
+          Apply(Select(Ident(newTermName("i")), newTermName("$less")), List(Ident(newTermName("len")))),
+          Block(
+            List(
+              Block(
+                List(
+                  ValDef(
+                    Modifiers(),
+                    newTermName("a"),
+                    TypeTree(),
+                    Apply(Select(Ident(newTermName("array")), newTermName("apply")), List(Ident(newTermName("i"))))
+                  ),
+                  Apply(
+                    Ident(methodName),
+                    List(Ident(newTermName("a")), Ident(newTermName("i")))
+                  )
+                ),
+                Assign(Ident(newTermName("i")), Apply(Select(Ident(newTermName("i")), newTermName("$plus")), List(Literal(Constant(1)))))
+              )
+            ),
+            Apply(Ident(newTermName("while$1")), List())
+          ),
+          Literal(Constant(()))
+        )
+      )
+    )
+    resetAllAttrs(b)
+  }
+
+
   import scala.reflect.macro.Context
 
   implicit def Util(context: Context) = new Util[context.type](context)
