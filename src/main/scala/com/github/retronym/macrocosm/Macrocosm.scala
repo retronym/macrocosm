@@ -177,6 +177,69 @@ object Macrocosm {
     reify(a)
   }
 
+  /**
+   * Converts:
+   * {{{
+   *  iteratorForeach(iterator)(a => <body>)
+   * }}}
+   *
+   * To:
+   * {{{
+   * def $f(a: A) = <body>
+   * while(iterator.hasNext) $f(iterator.next())
+   * }}}
+   */
+  def macro iteratorForeach[A](iterator: Iterator[A])(f: A => Unit) = {
+    val util = Util(_context); import util._
+
+    val methodName = newTermName("$f")
+
+    val b = Block(
+      List(
+        // Convert the function literal into a local method.
+        f match {
+          case Function(List(p @ ValDef(_, _, TypeTree(paramType), _)), body)  =>
+            DefDef(Modifiers(), methodName, List(), List(List(p)), TypeTree(), body)
+          case _ =>  sys.error("parameter `f` must be a funtcion literal.")
+        },
+        ValDef(
+          Modifiers(),
+          newTermName("is"),
+          TypeTree(),
+          iterator
+        )
+      ),
+      LabelDef(
+        newTermName("while$1"),
+        List(),
+        If(
+          Select(Ident(newTermName("is")), newTermName("hasNext")),
+          Block(
+            List(
+              Block(
+                List(
+                  ValDef(
+                    Modifiers(),
+                    newTermName("i"),
+                    TypeTree(),
+                    Apply(Select(Ident(newTermName("is")), newTermName("next")), List())
+                  )
+                ),
+                Apply(
+                  Ident(methodName),
+                  List(Ident(newTermName("i")))
+                )
+              )
+            ),
+            Apply(Ident(newTermName("while$1")), List())
+          ),
+          Literal(Constant(()))
+        )
+      )
+    )
+    resetAllAttrs(b)
+  }
+
   import scala.reflect.macro.Context
 
   implicit def Util(context: Context) = new Util[context.type](context)
