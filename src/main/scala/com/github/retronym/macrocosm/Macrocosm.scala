@@ -72,7 +72,7 @@ object Macrocosm {
      *  res0: Int = 42
      *  }}}
      */
-    def macro b() = {
+    def macro b(): Int = {
       def parseBinary(s: String): Option[Int] = {
         var i = s.length - 1
         var sum = 0
