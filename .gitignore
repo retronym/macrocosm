@@ -9,3 +9,5 @@ tags
 *~
 *#
 z_local.sbt
+project/.ivy
+project/.boot
