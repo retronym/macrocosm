@@ -119,3 +119,29 @@ scala> iteratorForeach(Iterator(1, 2, 3, 4, 5))(println(_))1
 5
 
 ```
+
+### Implicit Wrapper Elimination
+
+Rewrite `enrich[T](lhs)(numericInstance).*(rhs)` to `numericInstance.plus(lhs, rhs)` 
+by defining `*` as a macro def.
+
+```
+scala> import com.github.retronym.macrocosm.Macrocosm._
+import com.github.retronym.macrocosm.Macrocosm._
+
+scala> object A { def foo[T: Numeric](t: T) = (-t * t).abs }
+ public java.lang.Object foo(java.lang.Object, scala.math.Numeric);
+  Code:
+   Stack=4, Locals=3, Args_size=3
+   0:   aload_2
+   1:   aload_2
+   2:   aload_2
+   3:   aload_1
+   4:   invokeinterface #21,  2; //InterfaceMethod scala/math/Numeric.negate:(Ljava/lang/Object;)Ljava/lang/Object;
+   9:   aload_1
+   10:  invokeinterface #25,  3; //InterfaceMethod scala/math/Numeric.times:(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;
+   15:  invokeinterface #28,  2; //InterfaceMethod scala/math/Numeric.abs:(Ljava/lang/Object;)Ljava/lang/Object;
+   20:  areturn
+  LineNumberTable:
+   line 10: 2
+```

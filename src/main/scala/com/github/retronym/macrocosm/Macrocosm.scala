@@ -177,6 +177,32 @@ object Macrocosm {
     reify(a)
   }
 
+  implicit def infixNumericOps[T](x: T)(implicit num: Numeric[T]): Ops[T] = new Ops[T](x)
+
+  class Ops[T](lhs: T)(implicit T: Numeric[T]) {
+    import T._
+
+    def macro +(rhs: T) = Util(_context).binaryNumericOp(_this, "plus", rhs)
+
+    def macro -(rhs: T) = Util(_context).binaryNumericOp(_this, "minus", rhs)
+
+    def macro *(rhs: T) = Util(_context).binaryNumericOp(_this, "times", rhs)
+
+    def macro unary_-() = Util(_context).unaryNumericOp(_this, "negate")
+
+    def macro abs() = Util(_context).unaryNumericOp(_this, "abs")
+
+    def macro signum() = Util(_context).unaryNumericOp(_this, "signum")
+
+    def macro toInt() = Util(_context).unaryNumericOp(_this, "toInt")
+
+    def macro toLong() = Util(_context).unaryNumericOp(_this, "toLong")
+
+    def macro toFloat() = Util(_context).unaryNumericOp(_this, "toFloat")
+
+    def macro toDouble() = Util(_context).unaryNumericOp(_this, "toDouble")
+  }
+
   /**
    * Converts:
    * {{{
@@ -435,5 +461,23 @@ object Macrocosm {
 
     def stringLit(s: String): Tree =
       Literal(Constant(s))
+
+    def withNumericAndLhs(_this: Tree)(f: (Tree, Tree) => Tree) = {
+      _this match {
+        case Apply(Apply(TypeApply(_ /*infixNumericOps*/, _), List(lhs)), List(numeric)) =>
+          f(numeric, lhs)
+        case t => sys.error("unexpected tree: " + show(t))
+      }
+    }
+
+    def unaryNumericOp(_this: Tree, methodName: String) = withNumericAndLhs(_this) {
+      (numeric, lhs) =>
+        Apply(Select(numeric, newTermName(methodName)), List(lhs))
+    }
+
+    def binaryNumericOp(_this: Tree, methodName: String, rhs: Tree) = withNumericAndLhs(_this) {
+      (numeric, lhs) =>
+        Apply(Select(numeric, newTermName(methodName)), List(lhs, rhs))
+    }
   }
 }
