@@ -196,12 +196,7 @@ object Macrocosm {
 
     val b = Block(
       List(
-        // Convert the function literal into a local method.
-        f match {
-          case Function(List(p @ ValDef(_, _, TypeTree(paramType), _)), body)  =>
-            DefDef(Modifiers(), methodName, List(), List(List(p)), TypeTree(), body)
-          case _ =>  sys.error("parameter `f` must be a funtcion literal.")
-        },
+        literalFunctionToLocalMethod(f, methodName),
         ValDef(
           Modifiers(),
           newTermName("is"),
@@ -269,12 +264,7 @@ object Macrocosm {
 
     val b = Block(
       List(
-        // Convert the function literal into a local method.
-        f match {
-          case Function(List(p @ ValDef(_, _, TypeTree(paramType), _), p2), body)  =>
-            DefDef(Modifiers(), methodName, List(), List(List(p, p2)), TypeTree(), body)
-          case _ =>  sys.error("parameter `f` must be a funtcion literal.")
-        },
+        literalFunctionToLocalMethod(f, methodName),
         ValDef(
           Modifiers(),
           newTermName("array"),
@@ -326,6 +316,76 @@ object Macrocosm {
     resetAllAttrs(b)
   }
 
+  /**
+   * This call:
+   * {{{
+   * cfor(zero = 0)(okay = _ < 10, next = _ += 2) { println(_) }
+   * }}}
+   *
+   * Translates to:
+   * {{{
+   * val a = zero
+   * while (okay(a)) {
+   *   act(a)
+   *   a = next(a)
+   * }
+   * }}}
+   * where the bodies of `okay`, `next`, and `act` are lifted into local methods.
+   */
+  // Suggested by Rex Kerr here: http://www.scala-lang.org/node/9809
+  def macro cfor[A](zero: A)(okay: A => Boolean, next: A => A)(act: A => Unit) = {
+    val util = Util(_context); import util._
+
+    val okayMethodName = newTermName("$okay")
+    val nextMethodName = newTermName("$next")
+    val actMethodName = newTermName("$act")
+    val elementVarName = newTermName("a")
+
+    val b = Block(
+      List(
+        // Convert the function literal into a local method.
+        literalFunctionToLocalMethod(okay, okayMethodName),
+        literalFunctionToLocalMethod(next, nextMethodName),
+        literalFunctionToLocalMethod(act, actMethodName),
+        ValDef(
+          Modifiers(Set(reflect.api.Modifier.mutable)),
+          elementVarName,
+          TypeTree(),
+          zero
+        )
+      ),
+      LabelDef(
+        newTermName("while$1"),
+        List(),
+        If(
+          // okay(a)
+          Apply(Ident(okayMethodName), List(Ident(elementVarName))),
+          Block(
+            List(
+              Block(
+                List(
+                  // act(a)
+                  Apply(
+                    Ident(actMethodName),
+                    List(Ident(newTermName("a")))
+                  )
+                ),
+                // a = next(a)
+                Assign(
+                  Ident(elementVarName),
+                  Apply(Ident(nextMethodName), List(Ident(elementVarName)))
+                )
+              )
+            ),
+            Apply(Ident(newTermName("while$1")), List())
+          ),
+          Literal(Constant(()))
+        )
+      )
+    )
+    resetAllAttrs(b)
+  }
+
 
   import scala.reflect.macro.Context
 
@@ -349,6 +409,14 @@ object Macrocosm {
       val global = context.asInstanceOf[scala.tools.nsc.Global]
       global.resetAllAttrs(a.asInstanceOf[global.Tree])
              .asInstanceOf[Tree]
+    }
+
+    def literalFunctionToLocalMethod(f: Tree, methodName: TermName): Tree = {
+      f match {
+          case Function(params, body)  =>
+            DefDef(Modifiers(), methodName, List(), List(params), TypeTree(), body)
+          case _ =>  sys.error("parameter `f` must be a function literal.")
+      }
     }
 
     def predefAssert: Tree =
