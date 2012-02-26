@@ -39,6 +39,47 @@ scala> tb.runExpr(t)
 res7: Any = cba
 ```
 
+Especially fun is using `desugar` to see what the other macros here have done!
+
+```
+scala> desugar{def foo[T: Numeric](t: T) = t - t}
+res7: String = 
+{
+  def foo[T >: Nothing <: Any](t: T)(implicit evidence$1: Numeric[T]): T = evidence$1.minus(t, t);
+  ()
+}
+
+scala> desugar{var i = 0; cfor(0)(_ < 10, _ + 1)((a: Int) => i += 1)}
+res8: String = 
+{
+  var i: Int = 0;
+  {
+    var $a: Int = 0;
+    while$1(){
+      if ({
+        val x$1: Int = $a;
+        x$1.<(10)
+      })
+        {
+          {
+            {
+              val a: Int = $a;
+              i = i.+(1)
+            };
+            $a = {
+              val x$2: Int = $a;
+              x$2.+(1)
+            }
+          };
+          while$1()
+        }
+      else
+        ()
+    }
+  }
+}
+```
+
 ### Logging / Assertions
 ```
 scala> log("".isEmpty)
