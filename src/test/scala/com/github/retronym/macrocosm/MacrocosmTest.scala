@@ -27,4 +27,14 @@ object MacrocosmTest extends App {
   trace("foo".toString.toString)
 
   trace(List(1, 2).reverse.reverse)
+
+
+  val as = Array(1, 2, 3)
+
+  arrayForeachWithIndex(as)((a, i) => println((a, i)))
+
+  {var i = 0; cfor(0)(_ < 10, _ + 1)((a: Int) => i += 1)}
+
+  iteratorForeach(Iterator(1, 2, 3, 4, 5))(println(_))
+
 }

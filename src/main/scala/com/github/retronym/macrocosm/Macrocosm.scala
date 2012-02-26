@@ -185,18 +185,15 @@ object Macrocosm {
    *
    * To:
    * {{{
-   * def $f(a: A) = <body>
-   * while(iterator.hasNext) $f(iterator.next())
+   * while(iterator.hasNext) f(iterator.next())
    * }}}
+   * where `f` is inlined.
    */
   def macro iteratorForeach[A](iterator: Iterator[A])(f: A => Unit) = {
     val util = Util(_context); import util._
 
-    val methodName = newTermName("$f")
-
     val b = Block(
       List(
-        literalFunctionToLocalMethod(f, methodName),
         ValDef(
           Modifiers(),
           newTermName("is"),
@@ -220,10 +217,7 @@ object Macrocosm {
                     Apply(Select(Ident(newTermName("is")), newTermName("next")), List())
                   )
                 ),
-                Apply(
-                  Ident(methodName),
-                  List(Ident(newTermName("i")))
-                )
+                inlineApply(f, List(Ident(newTermName("i"))))
               )
             ),
             Apply(Ident(newTermName("while$1")), List())
@@ -245,66 +239,60 @@ object Macrocosm {
    * Translated to:
    * {{{
    * {
-   *  def $f(a: Int, i: Int) = println((a, i));
-   *  val array = as
-   *  var i = 0
-   *  val len = array.length
-   *  while (i < len) {
-   *    val a = array.apply(i)
-   *    $f(a, i);
-   *    i += 1
+   *  val $array = as
+   *  var $i = 0
+   *  val $len = array.length
+   *  while ($i < $len) {
+   *    val $a = array.apply($i)
+   *    f($a, $i);
+   *    $i += 1
    *  }
    * }
    * }}}
+   * where the `f` is inlined.
    */
   def macro arrayForeachWithIndex[A](array: Array[A])(f: (A, Int) => Unit) = {
     val util = Util(_context); import util._
 
-    val methodName = newTermName("$f")
-
     val b = Block(
       List(
-        literalFunctionToLocalMethod(f, methodName),
         ValDef(
           Modifiers(),
-          newTermName("array"),
+          newTermName("$array"),
           TypeTree(),
           array
         ),
         ValDef(
           Modifiers(Set(reflect.api.Modifier.mutable)),
-          newTermName("i"),
+          newTermName("$i"),
           TypeTree(),
           Literal(Constant(0))
         ),
         ValDef(
           Modifiers(),
-          newTermName("len"),
+          newTermName("$len"),
           TypeTree(),
-          Select(Ident(newTermName("array")), newTermName("length"))
+          Select(Ident(newTermName("$array")), newTermName("length"))
         )
       ),
       LabelDef(
         newTermName("while$1"),
         List(),
         If(
-          Apply(Select(Ident(newTermName("i")), newTermName("$less")), List(Ident(newTermName("len")))),
+          Apply(Select(Ident(newTermName("$i")), newTermName("$less")), List(Ident(newTermName("$len")))),
           Block(
             List(
               Block(
                 List(
                   ValDef(
                     Modifiers(),
-                    newTermName("a"),
+                    newTermName("$a"),
                     TypeTree(),
-                    Apply(Select(Ident(newTermName("array")), newTermName("apply")), List(Ident(newTermName("i"))))
+                    Apply(Select(Ident(newTermName("$array")), newTermName("apply")), List(Ident(newTermName("$i"))))
                   ),
-                  Apply(
-                    Ident(methodName),
-                    List(Ident(newTermName("a")), Ident(newTermName("i")))
-                  )
+                  inlineApply(f, List(Ident(newTermName("$a")), Ident(newTermName("$i"))))
                 ),
-                Assign(Ident(newTermName("i")), Apply(Select(Ident(newTermName("i")), newTermName("$plus")), List(Literal(Constant(1)))))
+                Assign(Ident(newTermName("$i")), Apply(Select(Ident(newTermName("$i")), newTermName("$plus")), List(Literal(Constant(1)))))
               )
             ),
             Apply(Ident(newTermName("while$1")), List())
@@ -330,23 +318,16 @@ object Macrocosm {
    *   a = next(a)
    * }
    * }}}
-   * where the bodies of `okay`, `next`, and `act` are lifted into local methods.
+   * where the bodies of `okay`, `next`, and `act` are inlined.
    */
   // Suggested by Rex Kerr here: http://www.scala-lang.org/node/9809
   def macro cfor[A](zero: A)(okay: A => Boolean, next: A => A)(act: A => Unit) = {
     val util = Util(_context); import util._
 
-    val okayMethodName = newTermName("$okay")
-    val nextMethodName = newTermName("$next")
-    val actMethodName = newTermName("$act")
-    val elementVarName = newTermName("a")
+    val elementVarName = newTermName("$a")
 
     val b = Block(
       List(
-        // Convert the function literal into a local method.
-        literalFunctionToLocalMethod(okay, okayMethodName),
-        literalFunctionToLocalMethod(next, nextMethodName),
-        literalFunctionToLocalMethod(act, actMethodName),
         ValDef(
           Modifiers(Set(reflect.api.Modifier.mutable)),
           elementVarName,
@@ -359,21 +340,18 @@ object Macrocosm {
         List(),
         If(
           // okay(a)
-          Apply(Ident(okayMethodName), List(Ident(elementVarName))),
+          inlineApply(okay, List(Ident(elementVarName))),
           Block(
             List(
               Block(
                 List(
                   // act(a)
-                  Apply(
-                    Ident(actMethodName),
-                    List(Ident(newTermName("a")))
-                  )
+                  inlineApply(act, List(Ident(elementVarName)))
                 ),
                 // a = next(a)
                 Assign(
                   Ident(elementVarName),
-                  Apply(Ident(nextMethodName), List(Ident(elementVarName)))
+                  inlineApply(next, List(Ident(elementVarName)))
                 )
               )
             ),
@@ -415,6 +393,30 @@ object Macrocosm {
       f match {
           case Function(params, body)  =>
             DefDef(Modifiers(), methodName, List(), List(params), TypeTree(), body)
+          case _ =>  sys.error("parameter `f` must be a function literal.")
+      }
+    }
+
+    /**
+     * In:
+     * `((p1, p2, ... pN) => <body>).apply(a1, a2, ..., aN)`
+     *
+     * Out:
+     * ```
+     * val p1 = a1; val p2 = a2; ... val pN = aN;
+     * <body>
+     * ````
+     */
+    def inlineApply(f: Tree, args: List[Tree]): Tree = {
+      f match {
+          case Function(params, body)  =>
+            if (params.length != args.length) sys.error("incorrect arity")
+            // val a = args(0); val b = args(1); ...
+            val paramVals = params.zip(args).map {
+              case (ValDef(_, pName, _, _), a) =>
+                ValDef(Modifiers(), pName, TypeTree(), a)
+            }
+            Block(paramVals, body)
           case _ =>  sys.error("parameter `f` must be a function literal.")
       }
     }
