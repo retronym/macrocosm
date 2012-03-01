@@ -186,3 +186,29 @@ scala> object A { def foo[T: Numeric](t: T) = (-t * t).abs }
   LineNumberTable:
    line 10: 2
 ```
+
+### Dynamic Lens Creation
+
+```
+scala> case class Person(name: String, age: Int)
+defined class Person
+
+scala> val nameLens = lens[Person].name
+dynatype: com.github.retronym.macrocosm.Macrocosm.lens[Person].applyDynamic("name")()
+TypeApply(Select(Select(Select(Select(Select(Ident(newTermName("com")), newTermName("github")), newTermName("retronym")), newTermName("macrocosm")), newTermName("Macrocosm")), newTermName("lens")), List(TypeTree().setType(Person)))
+nameLens: (Person => String, (Person, String) => Person) = (<function1>,<function2>)
+
+scala> val p = Person("brett", 21)
+p: Person = Person(brett,21)
+
+scala> nameLens._1(p)
+res1: String = brett
+
+scala> nameLens._2(p, "bill")
+res2: Person = Person(bill,21)
+
+scala> lens[Person].namexx
+dynatype: com.github.retronym.macrocosm.Macrocosm.lens[Person].applyDynamic("namexx")()
+TypeApply(Select(Select(Select(Select(Select(Ident(newTermName("com")), newTermName("github")), newTermName("retronym")), newTermName("macrocosm")), newTermName("Macrocosm")), newTermName("lens")), List(TypeTree().setType(Person)))
+error: exception during macro expansion: value namexx is not a member of Person
+```

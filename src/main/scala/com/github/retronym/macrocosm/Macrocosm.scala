@@ -174,7 +174,20 @@ object Macrocosm {
   }
 
   def macro tree(a: Any) = {
+    val util = Util(_context); import util._
     reify(a)
+  }
+
+  def macro symbol[T](f: T => Unit) = {
+    val util = Util(_context); import util._
+
+    f match {
+      case Function(List(_),
+        Block(List(Apply(s @ Select(_, _), List())), _)) =>
+        val AnyTpe = glb(List())
+        Select(reify(Ident(s.symbol).setType(AnyTpe)), "symbol")
+      case x => sys.error("unexpected tree: " + showRaw(x))
+    }
   }
 
   implicit def infixNumericOps[T](x: T)(implicit num: Numeric[T]): Ops[T] = new Ops[T](x)
@@ -201,6 +214,15 @@ object Macrocosm {
     def macro toFloat() = Util(_context).unaryNumericOp(_this, "toFloat")
 
     def macro toDouble() = Util(_context).unaryNumericOp(_this, "toDouble")
+  }
+
+  object Dyno extends Dynamic {
+    val methods = Set("foo", "bar")
+    def macro applyDynamic(mn: String)(args: Any*) = mn match {
+      case Literal(Constant(x: String)) if methods(x) =>
+        Literal(Constant(true))
+      case _ => sys.error("no dice")
+    }
   }
 
   /**
@@ -390,6 +412,52 @@ object Macrocosm {
     resetAllAttrs(b)
   }
 
+  //case class Lens[A, B](getter: A => B, setter: (A, B) => A)
+
+  /**
+   * Automatic lens generation.
+   *
+   * {{{
+   * case class Foo(a: Int)
+   * val l = lens[Foo].a
+   * val foo = Foo(0)
+   * l._1(foo) // 0
+   * l._2(foo, 1) // Foo(1)
+   * }}}
+   */
+  def lens[T] = new Lenser[T]
+
+  class Lenser[T] extends Dynamic {
+    def macro applyDynamic(mn: String)() = {
+      val util = Util(_context); import util._
+      import reflect.api.Modifier
+      println(showRaw(_this))
+      val t = (_this, mn) match {
+        case (TypeApply(
+          Select(
+            _, lensMethodTermName
+          ), List(tpe)), Literal(Constant(methodName: String))) =>
+          val getterMember = tpe.tpe.member(newTermName(methodName))
+          if (getterMember == NoSymbol) sys.error("value " + methodName + " is not a member of " + tpe.tpe)
+          val memberType = getterMember.typeSignatureIn(tpe.tpe) match {
+            case NullaryMethodType(memberType) => memberType
+            case _ => sys.error("member %s is not a field".format(methodName))
+          }
+          val getter = Function(List(ValDef(Modifiers(Set(Modifier.parameter)), newTermName("a$"), TypeTree().setType(tpe.tpe), EmptyTree)), Select(Ident(newTermName("a$")), newTermName(methodName)))
+          val setter = Function(
+            List(
+              ValDef(Modifiers(Set(Modifier.parameter)), newTermName("a$"), TypeTree().setType(tpe.tpe), EmptyTree),
+              ValDef(Modifiers(Set(Modifier.parameter)), newTermName("x$"), TypeTree().setType(memberType), EmptyTree)
+            ),
+            Apply(Select(Ident(newTermName("a$")), newTermName("copy")), List(AssignOrNamedArg(Ident(newTermName(methodName)), Ident(newTermName("x$")))))
+          )
+          val getterSetter = Apply(Select(Select(Ident(newTermName("scala")), newTermName("Tuple2")), newTermName("apply")), List(getter, setter))
+          getterSetter
+        case x => sys.error("unexpected _this tree: " + x)
+      }
+      resetAllAttrs(t)
+    }
+  }
 
   import scala.reflect.macro.Context
 
