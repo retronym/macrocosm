@@ -154,7 +154,7 @@ object Macrocosm {
             TTag = TypeTag(sub.tpe)
             reify {
               val temp: T = subExpr.eval
-              println(subExprCode.eval + " = " + temp)
+              println("" + subExprCode.eval + " = " + temp)
               temp
             }
           case a @ Select(qual, name) if name.isTermName =>
@@ -171,7 +171,7 @@ object Macrocosm {
                 TTag = TypeTag(sub.tpe)
                 reify {
                   val temp: T = subExpr.eval
-                  println(subExprCode.eval + " = " + temp)
+                  println("" + subExprCode.eval + " = " + temp)
                   temp
                 }
             }
@@ -181,12 +181,6 @@ object Macrocosm {
     }
     val t = tracingTransformer.transform(expr.tree)
     Expr[A](c.resetAllAttrs(t))
-  }
-
-  def tree(a: Any): reflect.mirror.Tree = macro treeImpl
-
-  def treeImpl(c: Context)(a: c.Expr[Any]) = {
-    c.Expr(c.reifyTree(a.tree))
   }
 
   // def macro symbol[T](f: T => Unit) = {
@@ -201,31 +195,76 @@ object Macrocosm {
   //   }
   // }
 
-  // implicit def infixNumericOps[T](x: T)(implicit num: Numeric[T]): Ops[T] = new Ops[T](x)
+  implicit def infixNumericOps[T](x: T)(implicit num: Numeric[T]): NumericOps[T] = new NumericOps[T](x)
 
-  // class Ops[T](lhs: T)(implicit T: Numeric[T]) {
-  //   import T._
+  class NumericOps[T](lhs: T)(implicit T: Numeric[T]) {
+    def +(rhs: T) = macro NumericOps.+[T]
+    def -(rhs: T) = macro NumericOps.-[T]
+    def *(rhs: T) = macro NumericOps.*[T]
+    def unary_-() = macro NumericOps.unary_-[T]
+    def abs() = macro NumericOps.abs[T]
+    def signum() = macro NumericOps.signum[T]
+    def toInt() = macro NumericOps.toInt[T]
+    def toLong() = macro NumericOps.toLong[T]
+    def toDouble() = macro NumericOps.toDouble[T]
+  }
 
-  //   def macro +(rhs: T) = Util(_context).binaryNumericOp(_this, "plus", rhs)
+  object NumericOps {
+    def +[T](c: Context)(rhs: c.Expr[T]) = {
+      val (numeric, lhs) = extractNumericAndLhs[T](c)
+      c.reify(numeric.eval.plus(lhs.eval, rhs.eval))
+    }
 
-  //   def macro -(rhs: T) = Util(_context).binaryNumericOp(_this, "minus", rhs)
+    def -[T](c: Context)(rhs: c.Expr[T]) = {
+      val (numeric, lhs) = extractNumericAndLhs[T](c)
+      c.reify(numeric.eval.minus(lhs.eval, rhs.eval))
+    }
 
-  //   def macro *(rhs: T) = Util(_context).binaryNumericOp(_this, "times", rhs)
+    def *[T](c: Context)(rhs: c.Expr[T]) = {
+      val (numeric, lhs) = extractNumericAndLhs[T](c)
+      c.reify(numeric.eval.times(lhs.eval, rhs.eval))
+    }
 
-  //   def macro unary_-() = Util(_context).unaryNumericOp(_this, "negate")
+    def unary_-[T](c: Context)() = {
+      val (numeric, lhs) = extractNumericAndLhs[T](c)
+      c.reify(numeric.eval.negate(lhs.eval))
+    }
 
-  //   def macro abs() = Util(_context).unaryNumericOp(_this, "abs")
+    def abs[T](c: Context)() = {
+      val (numeric, lhs) = extractNumericAndLhs[T](c)
+      c.reify(numeric.eval.abs(lhs.eval))
+    }
 
-  //   def macro signum() = Util(_context).unaryNumericOp(_this, "signum")
+    def signum[T](c: Context)() = {
+      val (numeric, lhs) = extractNumericAndLhs[T](c)
+      c.reify(numeric.eval.signum(lhs.eval))
+    }
 
-  //   def macro toInt() = Util(_context).unaryNumericOp(_this, "toInt")
+    def toInt[T](c: Context)() = {
+      val (numeric, lhs) = extractNumericAndLhs[T](c)
+      c.reify(numeric.eval.toInt(lhs.eval))
+    }
 
-  //   def macro toLong() = Util(_context).unaryNumericOp(_this, "toLong")
+    def toLong[T](c: Context)() = {
+      val (numeric, lhs) = extractNumericAndLhs[T](c)
+      c.reify(numeric.eval.toLong(lhs.eval))
+    }
 
-  //   def macro toFloat() = Util(_context).unaryNumericOp(_this, "toFloat")
+    def toDouble[T](c: Context)() = {
+      val (numeric, lhs) = extractNumericAndLhs[T](c)
+      c.reify(numeric.eval.toDouble(lhs.eval))
+    }
 
-  //   def macro toDouble() = Util(_context).unaryNumericOp(_this, "toDouble")
-  // }
+    def extractNumericAndLhs[T](c: Context): (c.Expr[Numeric[T]], c.Expr[T]) = {
+      import c.mirror._
+
+      c.prefix.tree match {
+        case Apply(Apply(TypeApply(_ /*infixNumericOps*/, _), List(lhs)), List(numeric)) =>
+          (c.Expr(numeric), c.Expr(lhs))
+        case t => sys.error("unexpected tree: " + show(t))
+      }
+    }
+  }
 
   // object Dyno extends Dynamic {
   //   val methods = Set("foo", "bar")
