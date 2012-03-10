@@ -14,6 +14,8 @@ object MacrocosmTest extends App {
 
   val b: Boolean = log("".isEmpty) // prints "".isEmpty() = true
 
+  println(b"0101010") // 42
+
   // def plus(a: Int, b: Int) = a + b
 
   // val i: Int = trace(plus(1, plus(2, 3)))

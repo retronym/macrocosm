@@ -55,49 +55,53 @@ object Macrocosm {
   //   "i$" + count
   // }
 
-  // implicit def enrichStringContext(sc: StringContext) = new RichStringContext(sc)
+  implicit def enrichStringContext(sc: StringContext) = new RichStringContext(sc)
 
-  // class RichStringContext(sc: StringContext) {
-  //   // This is how a non-macro version would be implemented.
-  //   // def b() = {
-  //   //   val s = sc.parts.mkString
-  //   //   parseBinary(s).getOrElse(sys.error("invalid binary literal: " + s))
-  //   // }
+  class RichStringContext(sc: StringContext) {
+    // This is how a non-macro version would be implemented.
+    // def b() = {
+    //   val s = sc.parts.mkString
+    //   parseBinary(s).getOrElse(sys.error("invalid binary literal: " + s))
+    // }
 
-  //   /** Binary literal integer
-  //    *
-  //    *  {{{
-  //    *  scala> b"101010"
-  //    *  res0: Int = 42
-  //    *  }}}
-  //    */
-  //   def macro b(): Int = {
-  //     def parseBinary(s: String): Option[Int] = {
-  //       var i = s.length - 1
-  //       var sum = 0
-  //       var mult = 1
-  //       while (i >= 0) {
-  //         s.charAt(i) match {
-  //           case '1' => sum += mult
-  //           case '0' =>
-  //           case x => return None
-  //         }
-  //         mult *= 2
-  //         i -= 1
-  //       }
-  //       Some(sum)
-  //     }
+    /** Binary literal integer
+     *
+     *  {{{
+     *  scala> b"101010"
+     *  res0: Int = 42
+     *  }}}
+     */
+    def b(): Int = macro bImpl
+  }
 
-  //     val i = _this match {
-  //       // e.g: `c.g.r.m.Macrocosm.enrichStringContext(scala.StringContext.apply("1111"))`
-  //       case Apply(_, List(Apply(_, List(Literal(Constant(const: String)))))) =>
-  //         parseBinary(const)
-  //       case _ =>
-  //         sys.error("Unexpected tree: " + show(_this))
-  //     }
-  //     i.map(x => Literal(Constant(x))).getOrElse(sys.error("invalid binary literal"))
-  //   }
-  // }
+  def bImpl(c: Context)(): c.Expr[Int] = {
+    def parseBinary(s: String): Option[Int] = {
+      var i = s.length - 1
+      var sum = 0
+      var mult = 1
+      while (i >= 0) {
+        s.charAt(i) match {
+          case '1' => sum += mult
+          case '0' =>
+          case x => return None
+        }
+        mult *= 2
+        i -= 1
+      }
+      Some(sum)
+    }
+
+    import c.mirror._
+
+    val i = c.prefix.tree match {
+      // e.g: `c.g.r.m.Macrocosm.enrichStringContext(scala.StringContext.apply("1111"))`
+      case Apply(_, List(Apply(_, List(Literal(Constant(const: String)))))) =>
+        parseBinary(const)
+      case x =>
+        sys.error("Unexpected tree: " + show(x))
+    }
+    c.Expr[Int](Literal(Constant(i.getOrElse(sys.error("invalid binary literal")))))      
+  }
 
   // /**
   //  * Statically checked version of `"some([Rr]egex)".r`.
