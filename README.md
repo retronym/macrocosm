@@ -221,7 +221,7 @@ nameLens: (Person => String, (Person, String) => Person) = (<function1>,<functio
 scala> val p = Person("brett", 21)
 p: Person = Person(brett,21)
 
-scala> val nameLens = lens[Person].name
+scala> val nameLens = lens[Person].name(())  // the last argument is a temporary hack.
 dynatype: com.github.retronym.macrocosm.Macrocosm.lens[Person].applyDynamic("name")()
 TypeApply(Select(Select(Select(Select(Select(Ident(newTermName("com")), newTermName("github")), newTermName("retronym")), newTermName("macrocosm")), newTermName("Macrocosm")), newTermName("lens")), List(TypeTree().setType(Person)))
 nameLens: (Person => String, (Person, String) => Person) = (<function1>,<function2>)
@@ -232,7 +232,7 @@ res1: String = brett
 scala> nameLens._2(p, "bill")
 res2: Person = Person(bill,21)
 
-scala> lens[Person].namexx
+scala> lens[Person].namexx(())
 dynatype: com.github.retronym.macrocosm.Macrocosm.lens[Person].applyDynamic("namexx")()
 TypeApply(Select(Select(Select(Select(Select(Ident(newTermName("com")), newTermName("github")), newTermName("retronym")), newTermName("macrocosm")), newTermName("Macrocosm")), newTermName("lens")), List(TypeTree().setType(Person)))
 error: exception during macro expansion: value namexx is not a member of Person

@@ -27,12 +27,19 @@ object MacrocosmTest extends App {
 
   trace(List(1, 2).reverse.reverse)
 
-  // val as = Array(1, 2, 3)
+  val as = Array(1, 2, 3)
 
   // arrayForeachWithIndex(as)((a, i) => println((a, i)))
 
-  // {var i = 0; cfor(0)(_ < 10, _ + 1)((a: Int) => i += 1)}
+  {var i = 0; cfor(0)(_ < 10, _ + 1)((a: Int) => i += 1)}
 
-  // iteratorForeach(Iterator(1, 2, 3, 4, 5))(println(_))
+  iteratorForeach(Iterator(1, 2, 3, 4, 5))(println(_))
+
+  case class Thing[A](a: A, b: Int)
+  val thingA = lens[Thing[String]].a(())
+  thingA._1(new Thing("foo", 1)) // foo
+  thingA._2(new Thing("foo", 1), "bar") // Thing("bar")
+
+  // lens[Thing[String]].xxx // error: value xxx is not a member of Thing[String]
 
 }

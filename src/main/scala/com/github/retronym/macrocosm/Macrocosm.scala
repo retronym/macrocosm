@@ -411,50 +411,68 @@ object Macrocosm {
 
   // //case class Lens[A, B](getter: A => B, setter: (A, B) => A)
 
-  // /**
-  //  * Automatic lens generation.
-  //  *
-  //  * {{{
-  //  * case class Foo(a: Int)
-  //  * val l = lens[Foo].a
-  //  * val foo = Foo(0)
-  //  * l._1(foo) // 0
-  //  * l._2(foo, 1) // Foo(1)
-  //  * }}}
-  //  */
-  // def lens[T] = new Lenser[T]
+  /**
+   * Automatic lens generation.
+   *
+   * {{{
+   * case class Foo(a: Int)
+   * val l = lens[Foo].a
+   * val foo = Foo(0)
+   * l._1(foo) // 0
+   * l._2(foo, 1) // Foo(1)
+   * }}}
+   */
+  def lens[T] = new Lenser[T]
 
-  // class Lenser[T] extends Dynamic {
-  //   def macro applyDynamic(mn: String)() = {
-  //     val util = Util(_context); import util._
-  //     import reflect.api.Modifier
-  //     println(showRaw(_this))
-  //     val t = (_this, mn) match {
-  //       case (TypeApply(
-  //         Select(
-  //           _, lensMethodTermName
-  //         ), List(tpe)), Literal(Constant(methodName: String))) =>
-  //         val getterMember = tpe.tpe.member(newTermName(methodName))
-  //         if (getterMember == NoSymbol) sys.error("value " + methodName + " is not a member of " + tpe.tpe)
-  //         val memberType = getterMember.typeSignatureIn(tpe.tpe) match {
-  //           case NullaryMethodType(memberType) => memberType
-  //           case _ => sys.error("member %s is not a field".format(methodName))
-  //         }
-  //         val getter = Function(List(ValDef(Modifiers(Set(Modifier.parameter)), newTermName("a$"), TypeTree().setType(tpe.tpe), EmptyTree)), Select(Ident(newTermName("a$")), newTermName(methodName)))
-  //         val setter = Function(
-  //           List(
-  //             ValDef(Modifiers(Set(Modifier.parameter)), newTermName("a$"), TypeTree().setType(tpe.tpe), EmptyTree),
-  //             ValDef(Modifiers(Set(Modifier.parameter)), newTermName("x$"), TypeTree().setType(memberType), EmptyTree)
-  //           ),
-  //           Apply(Select(Ident(newTermName("a$")), newTermName("copy")), List(AssignOrNamedArg(Ident(newTermName(methodName)), Ident(newTermName("x$")))))
-  //         )
-  //         val getterSetter = Apply(Select(Select(Ident(newTermName("scala")), newTermName("Tuple2")), newTermName("apply")), List(getter, setter))
-  //         getterSetter
-  //       case x => sys.error("unexpected _this tree: " + x)
-  //     }
-  //     resetAllAttrs(t)
-  //   }
-  // }
+  class Lenser[T] extends Dynamic {
+    def applyDynamic(propName: String)(dummy: Any)
+                     = macro Lenser.applyDynamic[T]
+  }
+
+  //
+  // the `dummy` parameter is a workaround for bug in macros.
+  //
+  // scala> object M { def m(a: String)() = macro mImpl[Int]; def mImpl[A: c.TypeTag](c: reflect.makro.Context)(a: c.Expr[String])() = a }
+  // defined module M
+  //
+  // scala> M.m("foo")()<console>:12: error: exception during macro expansion: assertion failed: 
+  //
+  object Lenser {
+    def applyDynamic[T: c.TypeTag]
+                    (c: Context)
+                    (propName: c.Expr[String])
+                    (dummy: c.Expr[Any]) 
+                     = {
+      import c.mirror._
+      val util = Util(c); import util._
+      import reflect.api.Modifier
+      //println(showRaw(_this))
+      val t = (c.prefix.tree, propName.tree) match {
+        case (TypeApply(
+          Select(
+            _, lensMethodTermName
+          ), List(tpe)), Literal(Constant(methodName: String))) =>
+          val getterMember = tpe.tpe.member(newTermName(methodName))
+          if (getterMember == NoSymbol) sys.error("value " + methodName + " is not a member of " + tpe.tpe)
+          val memberType = getterMember.typeSignatureIn(tpe.tpe) match {
+            case NullaryMethodType(memberType) => memberType
+            case _ => sys.error("member %s is not a field".format(methodName))
+          }
+          val getter = Function(List(ValDef(Modifiers(Set(Modifier.parameter)), newTermName("a$"), TypeTree().setType(tpe.tpe), EmptyTree)), Select(Ident(newTermName("a$")), newTermName(methodName)))
+          val setter = Function(
+            List(
+              ValDef(Modifiers(Set(Modifier.parameter)), newTermName("a$"), TypeTree().setType(tpe.tpe), EmptyTree),
+              ValDef(Modifiers(Set(Modifier.parameter)), newTermName("x$"), TypeTree().setType(memberType), EmptyTree)
+            ),
+            Apply(Select(Ident(newTermName("a$")), newTermName("copy")), List(AssignOrNamedArg(Ident(newTermName(methodName)), Ident(newTermName("x$")))))
+          )
+          val getterSetter = Apply(Select(Select(Ident(newTermName("scala")), newTermName("Tuple2")), newTermName("apply")), List(getter, setter))
+          getterSetter
+        case x => sys.error("unexpected c.prefix tree: " + x)
+      }
+      c.Expr[Any](c.resetAllAttrs(t))
+    }
+  }
 
   implicit def Util(context: Context) = new Util[context.type](context)
 
@@ -473,15 +491,15 @@ object Macrocosm {
      */
     def inlineApply(f: Tree, args: List[Tree]): Tree = {
       f match {
-          case Function(params, body)  =>
-            if (params.length != args.length) sys.error("incorrect arity")
-            // val a = args(0); val b = args(1); ...
-            val paramVals = params.zip(args).map {
-              case (ValDef(_, pName, _, _), a) =>
-                ValDef(Modifiers(), pName, TypeTree(), a)
-            }
-            Block(paramVals, body)
-          case _ =>  sys.error("parameter `f` must be a function literal.")
+        case Function(params, body)  =>
+          if (params.length != args.length) sys.error("incorrect arity")
+          // val a = args(0); val b = args(1); ...
+          val paramVals = params.zip(args).map {
+            case (ValDef(_, pName, _, _), a) =>
+              ValDef(Modifiers(), pName, TypeTree(), a)
+          }
+          Block(paramVals, body)
+        case _ =>  sys.error("parameter `f` must be a function literal.")
       }
     }
   }
