@@ -103,29 +103,33 @@ object Macrocosm {
     c.Expr[Int](Literal(Constant(i.getOrElse(sys.error("invalid binary literal")))))      
   }
 
-  // /**
-  //  * Statically checked version of `"some([Rr]egex)".r`.
-  //  * Invalid regular expressions trigger a compile failure.
-  //  * At runtime, the regex is parsed again.
-  //  *
-  //  * {{{
-  //  *  scala> regex(".*")
-  //  * res0: scala.util.matching.Regex = .*
-  //  *
-  //  * scala> regex("{")
-  //  * <console>:11: error: exception during macro expansion: Illegal repetition
-  //  * {
-  //  *           regex("{")
-  //  *                ^
-  //  * }}}
-  //  */
-  // def macro regex(s: String): scala.util.matching.Regex = {
-  //     s match {
-  //       case Literal(Constant(string: String)) =>
-  //         string.r // just to check
-  //       Select(s, "r")
-  //     }
-  // }
+  /**
+   * Statically checked version of `"some([Rr]egex)".r`.
+   * Invalid regular expressions trigger a compile failure.
+   * At runtime, the regex is parsed again.
+   *
+   * {{{
+   *  scala> regex(".*")
+   * res0: scala.util.matching.Regex = .*
+   *
+   * scala> regex("{")
+   * <console>:11: error: exception during macro expansion: Illegal repetition
+   * {
+   *           regex("{")
+   *                ^
+   * }}}
+   */
+  def regex(s: String): scala.util.matching.Regex = macro regexImpl
+
+  def regexImpl(c: Context)(s: c.Expr[String]): c.Expr[scala.util.matching.Regex] = {
+      import c.mirror._
+
+      s.tree match {
+        case Literal(Constant(string: String)) =>
+          string.r // just to check
+          reify(s.eval.r)        
+      }
+  }
 
   // /**
   //  * Trace execution on `c`, by printing the values of sub-expressions

@@ -16,6 +16,9 @@ object MacrocosmTest extends App {
 
   println(b"0101010") // 42
 
+  // regex("a{") does not compile
+  regex("a{1}")
+
   // def plus(a: Int, b: Int) = a + b
 
   // val i: Int = trace(plus(1, plus(2, 3)))
