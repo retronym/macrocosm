@@ -393,65 +393,51 @@ object Macrocosm {
   //   resetAllAttrs(b)
   // }
 
-  // /**
-  //  * This call:
-  //  * {{{
-  //  * cfor(zero = 0)(okay = _ < 10, next = _ += 2) { println(_) }
-  //  * }}}
-  //  *
-  //  * Translates to:
-  //  * {{{
-  //  * val a = zero
-  //  * while (okay(a)) {
-  //  *   act(a)
-  //  *   a = next(a)
-  //  * }
-  //  * }}}
-  //  * where the bodies of `okay`, `next`, and `act` are inlined.
-  //  */
-  // // Suggested by Rex Kerr here: http://www.scala-lang.org/node/9809
-  // def macro cfor[A](zero: A)(okay: A => Boolean, next: A => A)(act: A => Unit) = {
-  //   val util = Util(_context); import util._
+  /**
+   * This call:
+   * {{{
+   * cfor(zero = 0)(okay = _ < 10, next = _ += 2) { println(_) }
+   * }}}
+   *
+   * Translates to:
+   * {{{
+   * val a = zero
+   * while (okay(a)) {
+   *   act(a)
+   *   a = next(a)
+   * }
+   * }}}
+   * where the bodies of `okay`, `next`, and `act` are inlined.
+   */
+  // Suggested by Rex Kerr here: http://www.scala-lang.org/node/9809
+  def cfor[A](zero: A)(okay: A => Boolean, next: A => A)(act: A => Unit): Unit =
+    macro cforImpl[A]
 
-  //   val elementVarName = newTermName("$a")
+  def cforImpl[A: c.TypeTag]
+              (c: Context)
+              (zero: c.Expr[A])
+              (okay: c.Expr[A => Boolean], next: c.Expr[A => A])
+              (act: c.Expr[A => Unit]): c.Expr[Unit] = {
+    import c.mirror._
+    val util = Util(c)
 
-  //   val b = Block(
-  //     List(
-  //       ValDef(
-  //         Modifiers(Set(reflect.api.Modifier.mutable)),
-  //         elementVarName,
-  //         TypeTree(),
-  //         zero
-  //       )
-  //     ),
-  //     LabelDef(
-  //       newTermName("while$1"),
-  //       List(),
-  //       If(
-  //         // okay(a)
-  //         inlineApply(okay, List(Ident(elementVarName))),
-  //         Block(
-  //           List(
-  //             Block(
-  //               List(
-  //                 // act(a)
-  //                 inlineApply(act, List(Ident(elementVarName)))
-  //               ),
-  //               // a = next(a)
-  //               Assign(
-  //                 Ident(elementVarName),
-  //                 inlineApply(next, List(Ident(elementVarName)))
-  //               )
-  //             )
-  //           ),
-  //           Apply(Ident(newTermName("while$1")), List())
-  //         ),
-  //         Literal(Constant(()))
-  //       )
-  //     )
-  //   )
-  //   resetAllAttrs(b)
-  // }
+    val elementVarName = newTermName("$elem")
+    def inlineApplyExpr[B](f: c.Expr[A => B]) =
+      Expr[B](util.inlineApply(f, List(Ident(elementVarName))))
+
+    val okayInline = inlineApplyExpr[Boolean](okay)
+    val nextInline = inlineApplyExpr[A](next)
+    val actInline = inlineApplyExpr[Unit](act)
+
+    val t = reify {
+      var $elem: A = zero.eval
+      while(okayInline.eval) {
+        actInline.eval
+        $elem = nextInline.eval
+      }
+    }
+    c.Expr[Unit](c.resetAllAttrs(t))
+  }
 
   // //case class Lens[A, B](getter: A => B, setter: (A, B) => A)
 
@@ -502,10 +488,10 @@ object Macrocosm {
 
   // import scala.reflect.macro.Context
 
-  // implicit def Util(context: Context) = new Util[context.type](context)
+  implicit def Util(context: Context) = new Util[context.type](context)
 
-  // class Util[C <: Context with Singleton](val context: C) {
-  //   import context._
+  class Util[C <: Context with Singleton](val context: C) {
+    import context.mirror._
 
   //   def id(a: Tree): Tree = a
 
@@ -532,28 +518,28 @@ object Macrocosm {
   //     }
   //   }
 
-  //   /**
-  //    * In:
-  //    * `((p1, p2, ... pN) => <body>).apply(a1, a2, ..., aN)`
-  //    *
-  //    * Out:
-  //    * ```
-  //    * val p1 = a1; val p2 = a2; ... val pN = aN;
-  //    * <body>
-  //    * ````
-  //    */
-  //   def inlineApply(f: Tree, args: List[Tree]): Tree = {
-  //     f match {
-  //         case Function(params, body)  =>
-  //           if (params.length != args.length) sys.error("incorrect arity")
-  //           // val a = args(0); val b = args(1); ...
-  //           val paramVals = params.zip(args).map {
-  //             case (ValDef(_, pName, _, _), a) =>
-  //               ValDef(Modifiers(), pName, TypeTree(), a)
-  //           }
-  //           Block(paramVals, body)
-  //         case _ =>  sys.error("parameter `f` must be a function literal.")
-  //     }
-  //   }
-  // }
+    /**
+     * In:
+     * `((p1, p2, ... pN) => <body>).apply(a1, a2, ..., aN)`
+     *
+     * Out:
+     * ```
+     * val p1 = a1; val p2 = a2; ... val pN = aN;
+     * <body>
+     * ````
+     */
+    def inlineApply(f: Tree, args: List[Tree]): Tree = {
+      f match {
+          case Function(params, body)  =>
+            if (params.length != args.length) sys.error("incorrect arity")
+            // val a = args(0); val b = args(1); ...
+            val paramVals = params.zip(args).map {
+              case (ValDef(_, pName, _, _), a) =>
+                ValDef(Modifiers(), pName, TypeTree(), a)
+            }
+            Block(paramVals, body)
+          case _ =>  sys.error("parameter `f` must be a function literal.")
+      }
+    }
+  }
 }
