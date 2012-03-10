@@ -14,12 +14,6 @@ object MacrocosmTest extends App {
 
   val b: Boolean = log("".isEmpty) // prints "".isEmpty() = true
 
-  // try {
-  //   assert2("boo".reverse == "obb");
-  // } catch {
-  //   case a: AssertionError => println(a.getMessage) // assert2("boo".reverse == "obb")
-  // }
-
   // def plus(a: Int, b: Int) = a + b
 
   // val i: Int = trace(plus(1, plus(2, 3)))

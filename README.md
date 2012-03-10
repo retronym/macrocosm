@@ -116,12 +116,6 @@ java.lang.AssertionError: assertion failed: scala.this.Predef.augmentString("foo
 	at scala.Predef$.assert(Predef.scala:161)
 	at .<init>(<console>:10)
 
-
-scala> assert2("foo".reverse == "off")
-java.lang.AssertionError: assertion failed: assert2("foo".reverse == "off")
-	at scala.Predef$.assert(Predef.scala:161)
-	at .<init>(<console>:10)
-
 scala> def plus(a: Int, b: Int) = a + b
 plus: (a: Int, b: Int)Int
 

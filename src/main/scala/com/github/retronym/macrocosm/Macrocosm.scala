@@ -49,18 +49,6 @@ object Macrocosm {
     }    
   }
 
-  // /**
-  //  * Assert that `c` is true. The line of source code from the caller is used
-  //  * as the assertion message.
-  //  */
-  // def macro assert2(c: Boolean) = {
-  //   val util = Util(_context); import util._
-  //   val cTree: Tree = c
-  //   val pos = c.pos.asInstanceOf[scala.tools.nsc.util.OffsetPosition]
-
-  //   Apply(predefAssert, List[Tree](c, stringLit(pos.lineContent.trim)))
-  // }
-
   // private var count = 0
   //  def nextName() = {
   //   count += 1
