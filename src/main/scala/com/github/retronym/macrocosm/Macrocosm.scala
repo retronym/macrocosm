@@ -32,23 +32,22 @@ object Macrocosm {
     }
   }
 
-  // /**
-  //  * ```
-  //  * log("".isEmpty) // prints: "".isEmpty = true
-  //  * ```
-  //  */
-  // def macro log[A](a: A): A = {
-  //   val util = Util(_context); import util._
-  //   val tempValName = newTermName("$value")
-  //   Block(
-  //     List(
-  //       ValDef(Modifiers(), tempValName, TypeTree(), a),
-  //       Apply(predefPrint, List(stringLit(show(a) + " = "))),
-  //       Apply(predefPrintln, List(Ident(tempValName)))
-  //     ),
-  //     Ident(tempValName)
-  //   )
-  // }
+  /**
+   * ```
+   * log("".isEmpty) // prints: "".isEmpty = true
+   * ```
+   */
+  def log[A](a: A): A = macro logImpl[A]
+
+  def logImpl[A: c.TypeTag](c: Context)(a: c.Expr[A]): c.Expr[A] = {
+    import c.mirror._
+    val aCode = c.Expr[String](Literal(Constant(show(a))))
+    c.reify {
+      val temp = a.eval  // replace with `a.value` when that works.
+      println(aCode.eval + " = " + temp)
+      temp
+    }    
+  }
 
   // /**
   //  * Assert that `c` is true. The line of source code from the caller is used
