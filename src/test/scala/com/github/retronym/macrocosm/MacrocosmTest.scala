@@ -19,14 +19,13 @@ object MacrocosmTest extends App {
   // regex("a{") does not compile
   regex("a{1}")
 
-  // def plus(a: Int, b: Int) = a + b
+  def plus(a: Int, b: Int) = a + b
 
-  // val i: Int = trace(plus(1, plus(2, 3)))
+  val i: Int = trace(plus(1, plus(2, 3)))
 
-  // trace("foo".toString.toString)
+  trace("foo".toString.toString)
 
-  // trace(List(1, 2).reverse.reverse)
-
+  trace(List(1, 2).reverse.reverse)
 
   // val as = Array(1, 2, 3)
 

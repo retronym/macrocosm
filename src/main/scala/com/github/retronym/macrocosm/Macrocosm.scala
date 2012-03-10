@@ -11,7 +11,7 @@ object Macrocosm {
   def desugarImpl(c: Context)(a: c.Expr[Any]) = {
     import c.mirror._
 
-    val s = show(a.tree)    
+    val s = show(a.tree)
     c.Expr(
       Literal(Constant(s))
     )
@@ -46,14 +46,8 @@ object Macrocosm {
       val temp = a.eval  // replace with `a.value` when that works.
       println(aCode.eval + " = " + temp)
       temp
-    }    
+    }
   }
-
-  // private var count = 0
-  //  def nextName() = {
-  //   count += 1
-  //   "i$" + count
-  // }
 
   implicit def enrichStringContext(sc: StringContext) = new RichStringContext(sc)
 
@@ -100,7 +94,7 @@ object Macrocosm {
       case x =>
         sys.error("Unexpected tree: " + show(x))
     }
-    c.Expr[Int](Literal(Constant(i.getOrElse(sys.error("invalid binary literal")))))      
+    c.Expr[Int](Literal(Constant(i.getOrElse(sys.error("invalid binary literal")))))
   }
 
   /**
@@ -127,58 +121,69 @@ object Macrocosm {
       s.tree match {
         case Literal(Constant(string: String)) =>
           string.r // just to check
-          reify(s.eval.r)        
+          reify(s.eval.r)
       }
   }
 
-  // /**
-  //  * Trace execution on `c`, by printing the values of sub-expressions
-  //  * to standard out.
-  //  */
-  // def macro trace(c: Any) = {
-  //   val util = Util(_context); import util._
-  //   object tracingTransformer extends Transformer {
-  //     //val symTree = mutable.buffer[SymTree]
-  //     override def transform(tree: Tree): Tree = {
-  //       tree match {
-  //         case a @ Apply(qual, args) =>
-  //           val tempValName = newTermName(nextName)
-  //           val sub = Apply(transform(qual), args.map(a => transform(a)))
-  //           Block(
-  //             List(
-  //               ValDef(Modifiers(), tempValName, TypeTree(), sub),
-  //               Apply(predefPrint, List(stringLit(show(a) + " = "))),
-  //               Apply(predefPrintln, List(Ident(tempValName)))
-  //             ),
-  //             Ident(tempValName)
-  //           )
-  //         case a @ Select(qual, name) if name.isTermName =>
-  //           val tempValName = newTermName(nextName)
-  //           val sub = Select(transform(qual), name)
-  //           a.tpe match {
-  //             case MethodType(_, _) | PolyType(_, _) =>
-  //               // qual.meth(...)
-  //               // \-------/
-  //               //    don't trace this part.
-  //               sub
-  //             case _ =>
-  //               Block(
-  //                 List(
-  //                   ValDef(Modifiers(), tempValName, TypeTree(), sub),
-  //                   Apply(predefPrint, List(stringLit(show(a) + " = "))),
-  //                   Apply(predefPrintln, List(Ident(tempValName)))
-  //                 ),
-  //                 Ident(tempValName)
-  //               )
-  //           }
-  //         case _ => super.transform(tree)
-  //       }
-  //     }
-  //   }
-  //   val t = tracingTransformer.transform(c)
-  //   //println("t = " + t)
-  //   resetAllAttrs(t)
-  // }
+  /**
+   * Trace execution on `c`, by printing the values of sub-expressions
+   * to standard out.
+   */
+  def trace[A](expr: A) = macro traceImpl[A]
+
+  def traceImpl[A: c.TypeTag](c: Context)(expr: c.Expr[A]): c.Expr[A] = {
+    import c.mirror._
+
+    // stand-in for the real type of the traced sub expression.
+    // This lets us conveniently splice this type into the
+    // reify call. The correct type is passed in implicitly
+    // as the TypeTag[T]
+    trait T
+
+    // TODO:  an unexplained "forward reference" error occurs
+    //        if this is moved below and turned into a val.
+    implicit var TTag: TypeTag[T] = null
+
+    object tracingTransformer extends Transformer {
+      override def transform(tree: Tree): Tree = {
+        tree match {
+          case a @ Apply(qual, args) =>
+            val tempValName = newTermName(nextName)
+            val sub = Apply(transform(qual), args.map(a => transform(a)))
+            val subExpr = Expr[T](sub)
+            val subExprCode = Expr[String](Literal(Constant(show(a))))
+            TTag = TypeTag(sub.tpe)
+            reify {
+              val temp: T = subExpr.eval
+              println(subExprCode.eval + " = " + temp)
+              temp
+            }
+          case a @ Select(qual, name) if name.isTermName =>
+            val tempValName = newTermName(nextName)
+            val sub = Select(transform(qual), name)
+            a.tpe match {
+              case MethodType(_, _) | PolyType(_, _) =>
+                // qual.meth(...)
+                // \-------/
+                //    don't trace this part.
+                sub
+              case _ =>
+                val subExpr = Expr[T](sub)
+                val subExprCode = Expr[Any](Literal(Constant(show(a))))
+                TTag = TypeTag(sub.tpe)
+                reify {
+                  val temp: T = subExpr.eval
+                  println(subExprCode.eval + " = " + temp)
+                  temp
+                }
+            }
+          case _ => super.transform(tree)
+        }
+      }
+    }
+    val t = tracingTransformer.transform(expr.tree)
+    Expr[A](c.resetAllAttrs(t))
+  }
 
   // def macro tree(a: Any) = {
   //   val util = Util(_context); import util._
