@@ -43,25 +43,28 @@ import com.github.retronym.macrocosm.Macrocosm._
 
 scala> desugar("foo".map(_ + 1))
 res0: String = scala.this.Predef.augmentString("foo").map[Int, Any](((x$1: Char) => x$1.+(1)))(scala.this.Predef.fallbackStringCanBuildFrom[Int])
+```
 
+The following work without macrocosm.
 
-scala> val t = tree("abc".reverse)
-t: reflect.mirror.Select = scala.this.Predef.augmentString("abc").reverse
+```
+scala> val t = reflect.mirror.reify("abc".reverse)
+t: reflect.mirror.Expr[String] = Expr[null](scala.this.Predef.augmentString("abc").reverse)
 
-scala> reflect.mirror.showRaw(t)
-res4: String = Select(Apply(Select(Select(This(newTypeName("scala")), newTermName("Predef")), newTermName("augmentString")), List(Literal(Constant()))), newTermName("reverse"))
+scala> reflect.mirror.showRaw(t.tree)
+res3: String = Select(Apply(Select(Select(This(newTypeName("scala")), newTermName("Predef")), newTermName("augmentString")), List(Literal(Constant("abc")))), newTermName("reverse"))
 
 scala> val tb = new reflect.runtime.Mirror.ToolBox()
-tb: reflect.runtime.Mirror.ToolBox = scala.reflect.runtime.ToolBoxes$ToolBox@2c96cb44
+tb: reflect.runtime.Mirror.ToolBox = scala.reflect.runtime.ToolBoxes$ToolBox@55b6ed96
 
-scala> tb.typeCheck(t)
+scala> tb.typeCheck(t.tree)
 res5: reflect.mirror.Tree = scala.this.Predef.augmentString("abc").reverse
 
 scala> .tpe
 res6: reflect.mirror.Type = String
 
-scala> tb.runExpr(t)
-res7: Any = cba
+scala> tb.runExpr(t.tree)
+res8: Any = cba
 ```
 
 Especially fun is using `desugar` to see what the other macros here have done!

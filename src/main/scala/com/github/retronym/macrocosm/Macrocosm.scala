@@ -148,7 +148,6 @@ object Macrocosm {
       override def transform(tree: Tree): Tree = {
         tree match {
           case a @ Apply(qual, args) =>
-            val tempValName = newTermName(nextName)
             val sub = Apply(transform(qual), args.map(a => transform(a)))
             val subExpr = Expr[T](sub)
             val subExprCode = Expr[String](Literal(Constant(show(a))))
@@ -159,7 +158,6 @@ object Macrocosm {
               temp
             }
           case a @ Select(qual, name) if name.isTermName =>
-            val tempValName = newTermName(nextName)
             val sub = Select(transform(qual), name)
             a.tpe match {
               case MethodType(_, _) | PolyType(_, _) =>
@@ -185,10 +183,11 @@ object Macrocosm {
     Expr[A](c.resetAllAttrs(t))
   }
 
-  // def macro tree(a: Any) = {
-  //   val util = Util(_context); import util._
-  //   reify(a)
-  // }
+  def tree(a: Any): reflect.mirror.Tree = macro treeImpl
+
+  def treeImpl(c: Context)(a: c.Expr[Any]) = {
+    c.Expr(c.reifyTree(a.tree))
+  }
 
   // def macro symbol[T](f: T => Unit) = {
   //   val util = Util(_context); import util._
