@@ -288,80 +288,54 @@ object Macrocosm {
     c.Expr[Unit](c.resetAllAttrs(e.tree))
   }
 
-  // /**
-  //  * Fast, indexed, foreach over an array, translated to a while loop.
-  //  *
-  //  * {{{
-  //  *  arrayForeachWithIndex(as)((a, i) => println((a, i)))
-  //  * }}}
-  //  *
-  //  * Translated to:
-  //  * {{{
-  //  * {
-  //  *  val $array = as
-  //  *  var $i = 0
-  //  *  val $len = array.length
-  //  *  while ($i < $len) {
-  //  *    val $a = array.apply($i)
-  //  *    f($a, $i);
-  //  *    $i += 1
-  //  *  }
-  //  * }
-  //  * }}}
-  //  * where the `f` is inlined.
-  //  */
-  // def macro arrayForeachWithIndex[A](array: Array[A])(f: (A, Int) => Unit) = {
-  //   val util = Util(_context); import util._
+  /**
+   * Fast, indexed, foreach over an array, translated to a while loop.
+   *
+   * {{{
+   *  arrayForeachWithIndex(as)((a, i) => println((a, i)))
+   * }}}
+   *
+   * Translated to:
+   * {{{
+   * {
+   *  val $array = as
+   *  var $i = 0
+   *  val $len = array.length
+   *  while ($i < $len) {
+   *    val $a = array.apply($i)
+   *    f($a, $i);
+   *    $i += 1
+   *  }
+   * }
+   * }}}
+   * where the `f` is inlined.
+   */
+  def arrayForeachWithIndex[A](array: Array[A])(f: (A, Int) => Unit): Unit =
+    macro arrayForeachWithIndexImpl[A]
 
-  //   val b = Block(
-  //     List(
-  //       ValDef(
-  //         Modifiers(),
-  //         newTermName("$array"),
-  //         TypeTree(),
-  //         array
-  //       ),
-  //       ValDef(
-  //         Modifiers(Set(reflect.api.Modifier.mutable)),
-  //         newTermName("$i"),
-  //         TypeTree(),
-  //         Literal(Constant(0))
-  //       ),
-  //       ValDef(
-  //         Modifiers(),
-  //         newTermName("$len"),
-  //         TypeTree(),
-  //         Select(Ident(newTermName("$array")), newTermName("length"))
-  //       )
-  //     ),
-  //     LabelDef(
-  //       newTermName("while$1"),
-  //       List(),
-  //       If(
-  //         Apply(Select(Ident(newTermName("$i")), newTermName("$less")), List(Ident(newTermName("$len")))),
-  //         Block(
-  //           List(
-  //             Block(
-  //               List(
-  //                 ValDef(
-  //                   Modifiers(),
-  //                   newTermName("$a"),
-  //                   TypeTree(),
-  //                   Apply(Select(Ident(newTermName("$array")), newTermName("apply")), List(Ident(newTermName("$i"))))
-  //                 ),
-  //                 inlineApply(f, List(Ident(newTermName("$a")), Ident(newTermName("$i"))))
-  //               ),
-  //               Assign(Ident(newTermName("$i")), Apply(Select(Ident(newTermName("$i")), newTermName("$plus")), List(Literal(Constant(1)))))
-  //             )
-  //           ),
-  //           Apply(Ident(newTermName("while$1")), List())
-  //         ),
-  //         Literal(Constant(()))
-  //       )
-  //     )
-  //   )
-  //   resetAllAttrs(b)
-  // }
+  def arrayForeachWithIndexImpl[A: c.TypeTag]
+                               (c: Context)
+                               (array: c.Expr[Array[A]])
+                               (f: c.Expr[(A, Int) => Unit]): c.Expr[Unit] = {
+    import c.mirror._
+    val util = Util(c); import util._
+    val indexVarName = newTermName("$i")
+    val elementVarName = newTermName("$elem")
+    val fExpr = Expr[Unit](util.inlineApply(f, List(Ident(elementVarName), Ident(indexVarName))))
+
+    val expr = reify {
+      val a = array.eval
+      var $i = 0
+      val len = a.length
+      while ($i < len) {
+        val $elem = a($i)
+        fExpr.eval
+        $i += 1
+      }
+    }
+
+    Expr(c.resetAllAttrs(expr.tree))
+  }
 
   /**
    * This call:
@@ -435,13 +409,13 @@ object Macrocosm {
   // scala> object M { def m(a: String)() = macro mImpl[Int]; def mImpl[A: c.TypeTag](c: reflect.makro.Context)(a: c.Expr[String])() = a }
   // defined module M
   //
-  // scala> M.m("foo")()<console>:12: error: exception during macro expansion: assertion failed: 
+  // scala> M.m("foo")()<console>:12: error: exception during macro expansion: assertion failed:
   //
   object Lenser {
     def applyDynamic[T: c.TypeTag]
                     (c: Context)
                     (propName: c.Expr[String])
-                    (dummy: c.Expr[Any]) 
+                    (dummy: c.Expr[Any])
                      = {
       import c.mirror._
       val util = Util(c); import util._

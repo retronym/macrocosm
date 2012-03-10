@@ -29,7 +29,7 @@ object MacrocosmTest extends App {
 
   val as = Array(1, 2, 3)
 
-  // arrayForeachWithIndex(as)((a, i) => println((a, i)))
+  arrayForeachWithIndex(as)((a, i) => println((a, i)))
 
   {var i = 0; cfor(0)(_ < 10, _ + 1)((a: Int) => i += 1)}
 
