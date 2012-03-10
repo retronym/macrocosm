@@ -1,6 +1,31 @@
 An exploration of [Scala macros](http://scala-macros.org).
 
-Here's what we've got so far:
+This branch has been adapted for the new syntax proposed in [SIP-16](http://docs.scala-lang.org/sips/pending/self-cleaning-macros.html)
+
+## Prerequisites
+
+### SIP-16 reference implementation
+
+Build a local copy of the SIP-16 reference implementation.
+
+```
+cd ~/code
+git clone https://github.com/scalamacros/kepler.git
+git checkout develop
+ant all.clean quick.bin
+mkir ~/usr
+cp build/pack ~/usr/scala-kepler
+```
+
+If you choose a different path, edit `build.sbt` in this project to point `scalaHome` to the right place.
+
+### SBT 0.12.0-SNAPSHOT
+
+Use the latest [launcher](http://repo.typesafe.com/typesafe/ivy-snapshots/org.scala-sbt/launcher/). You probably want to start SBT without using your global `~/.sbt` folder with incompatible plugins.
+
+The easiest way to obtain the right SBT version, and to use a separate .sbt directory is to use Paul Phillips' [sbt-extras launcher script](https://github.com/paulp/sbt-extras/blob/master/sbt).
+
+## Now, the macros!
 
 ### Compiler Diagnostics / Tree Manipulation
 

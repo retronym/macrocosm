@@ -4,7 +4,7 @@ name := "macrocosm"
 
 version := "0.1-SNAPSHOT"
 
-scalaVersion := "2.10.0-SNAPSHOT"
+scalaHome := Some(file(System.getProperty("user.home")) / "usr" / "scala-kepler")
 
 scalacOptions ++= Seq("-Xmacros", "-unchecked", "-Yvirtpatmat", "-Xexperimental")
 
