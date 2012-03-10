@@ -15,7 +15,6 @@ object Macrocosm {
     c.Expr(
       Literal(Constant(s))
     )
-    // c.reify(s)
   }
 
   /**
@@ -183,18 +182,6 @@ object Macrocosm {
     Expr[A](c.resetAllAttrs(t))
   }
 
-  // def macro symbol[T](f: T => Unit) = {
-  //   val util = Util(_context); import util._
-
-  //   f match {
-  //     case Function(List(_),
-  //       Block(List(Apply(s @ Select(_, _), List())), _)) =>
-  //       val AnyTpe = glb(List())
-  //       Select(reify(Ident(s.symbol).setType(AnyTpe)), "symbol")
-  //     case x => sys.error("unexpected tree: " + showRaw(x))
-  //   }
-  // }
-
   implicit def infixNumericOps[T](x: T)(implicit num: Numeric[T]): NumericOps[T] = new NumericOps[T](x)
 
   class NumericOps[T](lhs: T)(implicit T: Numeric[T]) {
@@ -266,57 +253,40 @@ object Macrocosm {
     }
   }
 
-  // /**
-  //  * Converts:
-  //  * {{{
-  //  *  iteratorForeach(iterator)(a => <body>)
-  //  * }}}
-  //  *
-  //  * To:
-  //  * {{{
-  //  * while(iterator.hasNext) f(iterator.next())
-  //  * }}}
-  //  * where `f` is inlined.
-  //  */
-  // def macro iteratorForeach[A](iterator: Iterator[A])(f: A => Unit) = {
-  //   val util = Util(_context); import util._
+  /**
+   * Converts:
+   * {{{
+   *  iteratorForeach(iterator)(a => <body>)
+   * }}}
+   *
+   * To:
+   * {{{
+   * while(iterator.hasNext) f(iterator.next())
+   * }}}
+   * where `f` is inlined.
+   */
+  def iteratorForeach[A](iterator: Iterator[A])
+                        (act: A => Unit): Unit =
+    macro iteratorForeachImpl[A]
 
-  //   val b = Block(
-  //     List(
-  //       ValDef(
-  //         Modifiers(),
-  //         newTermName("is"),
-  //         TypeTree(),
-  //         iterator
-  //       )
-  //     ),
-  //     LabelDef(
-  //       newTermName("while$1"),
-  //       List(),
-  //       If(
-  //         Select(Ident(newTermName("is")), newTermName("hasNext")),
-  //         Block(
-  //           List(
-  //             Block(
-  //               List(
-  //                 ValDef(
-  //                   Modifiers(),
-  //                   newTermName("i"),
-  //                   TypeTree(),
-  //                   Apply(Select(Ident(newTermName("is")), newTermName("next")), List())
-  //                 )
-  //               ),
-  //               inlineApply(f, List(Ident(newTermName("i"))))
-  //             )
-  //           ),
-  //           Apply(Ident(newTermName("while$1")), List())
-  //         ),
-  //         Literal(Constant(()))
-  //       )
-  //     )
-  //   )
-  //   resetAllAttrs(b)
-  // }
+  def iteratorForeachImpl[A: c.TypeTag]
+                         (c: Context)
+                         (iterator: c.Expr[Iterator[A]])
+                         (act: c.Expr[A => Unit]): c.Expr[Unit] = {
+    import c.mirror._
+    val util = Util(c)
+    val elementVarName = newTermName("$elem")
+    val actExpr = Expr[Unit](util.inlineApply(act, List(Ident(elementVarName))))
+
+    val e = reify {
+      val i = iterator.eval
+      while(i.hasNext) {
+        val $elem = i.next()
+        actExpr.eval
+      }
+    }
+    c.Expr[Unit](c.resetAllAttrs(e.tree))
+  }
 
   // /**
   //  * Fast, indexed, foreach over an array, translated to a while loop.
@@ -486,37 +456,10 @@ object Macrocosm {
   //   }
   // }
 
-  // import scala.reflect.macro.Context
-
   implicit def Util(context: Context) = new Util[context.type](context)
 
   class Util[C <: Context with Singleton](val context: C) {
     import context.mirror._
-
-  //   def id(a: Tree): Tree = a
-
-  //   // The first version of the trace macro did not call this, which led to NSDNHO
-  //   // errors with `trace(1.toString.toString)`.
-  //   //
-  //   // Explanation from Eugene:
-  //   //
-  //   // The trouble was with the fact that the tree produced by trace(1.toString.toString)
-  //   // was partially typed. And when some AST already has a type, typer doesn't drill into
-  //   // its children and just moves along. Consequently, newly generated valdefs were never
-  //   // processed by the typer, i.e. never got symbols assigned to them, hence the NSDNHO.
-  //   def resetAllAttrs(a: Tree): Tree = {
-  //     val global = context.asInstanceOf[scala.tools.nsc.Global]
-  //     global.resetAllAttrs(a.asInstanceOf[global.Tree])
-  //            .asInstanceOf[Tree]
-  //   }
-
-  //   def literalFunctionToLocalMethod(f: Tree, methodName: TermName): Tree = {
-  //     f match {
-  //         case Function(params, body)  =>
-  //           DefDef(Modifiers(), methodName, List(), List(params), TypeTree(), body)
-  //         case _ =>  sys.error("parameter `f` must be a function literal.")
-  //     }
-  //   }
 
     /**
      * In:
