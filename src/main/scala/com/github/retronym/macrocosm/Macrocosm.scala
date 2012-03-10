@@ -266,15 +266,6 @@ object Macrocosm {
     }
   }
 
-  // object Dyno extends Dynamic {
-  //   val methods = Set("foo", "bar")
-  //   def macro applyDynamic(mn: String)(args: Any*) = mn match {
-  //     case Literal(Constant(x: String)) if methods(x) =>
-  //       Literal(Constant(true))
-  //     case _ => sys.error("no dice")
-  //   }
-  // }
-
   // /**
   //  * Converts:
   //  * {{{
@@ -563,39 +554,6 @@ object Macrocosm {
   //           Block(paramVals, body)
   //         case _ =>  sys.error("parameter `f` must be a function literal.")
   //     }
-  //   }
-
-  //   def predefAssert: Tree =
-  //     predefSelect("assert")
-
-  //   def predefPrintln: Tree =
-  //     predefSelect("println")
-
-  //   def predefPrint: Tree =
-  //     predefSelect("print")
-
-  //   def predefSelect(name: String): Tree =
-  //     Select(Select(Ident(newTermName("scala")), newTermName("Predef")), newTermName(name))
-
-  //   def stringLit(s: String): Tree =
-  //     Literal(Constant(s))
-
-  //   def withNumericAndLhs(_this: Tree)(f: (Tree, Tree) => Tree) = {
-  //     _this match {
-  //       case Apply(Apply(TypeApply(_ /*infixNumericOps*/, _), List(lhs)), List(numeric)) =>
-  //         f(numeric, lhs)
-  //       case t => sys.error("unexpected tree: " + show(t))
-  //     }
-  //   }
-
-  //   def unaryNumericOp(_this: Tree, methodName: String) = withNumericAndLhs(_this) {
-  //     (numeric, lhs) =>
-  //       Apply(Select(numeric, newTermName(methodName)), List(lhs))
-  //   }
-
-  //   def binaryNumericOp(_this: Tree, methodName: String, rhs: Tree) = withNumericAndLhs(_this) {
-  //     (numeric, lhs) =>
-  //       Apply(Select(numeric, newTermName(methodName)), List(lhs, rhs))
   //   }
   // }
 }
