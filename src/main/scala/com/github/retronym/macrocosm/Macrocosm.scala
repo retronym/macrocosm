@@ -275,17 +275,15 @@ object Macrocosm {
                          (act: c.Expr[A => Unit]): c.Expr[Unit] = {
     import c.mirror._
     val util = Util(c)
-    val elementVarName = newTermName("$elem")
-    val actExpr = Expr[Unit](util.inlineApply(act, List(Ident(elementVarName))))
 
     val e = reify {
       val i = iterator.eval
       while(i.hasNext) {
-        val $elem = i.next()
-        actExpr.eval
+        val elem = i.next()
+        act.eval(elem)
       }
     }
-    c.Expr[Unit](c.resetAllAttrs(e.tree))
+    c.Expr[Unit](c.resetAllAttrs(util.inlineApplyRecursive(e.tree)))
   }
 
   /**
@@ -319,22 +317,19 @@ object Macrocosm {
                                (f: c.Expr[(A, Int) => Unit]): c.Expr[Unit] = {
     import c.mirror._
     val util = Util(c); import util._
-    val indexVarName = newTermName("$i")
-    val elementVarName = newTermName("$elem")
-    val fExpr = Expr[Unit](util.inlineApply(f, List(Ident(elementVarName), Ident(indexVarName))))
 
     val expr = reify {
       val a = array.eval
-      var $i = 0
+      var i = 0
       val len = a.length
-      while ($i < len) {
-        val $elem = a($i)
-        fExpr.eval
-        $i += 1
+      while (i < len) {
+        val elem = a(i)
+        f.eval(elem, i)
+        i += 1
       }
     }
 
-    Expr(c.resetAllAttrs(expr.tree))
+    Expr(c.resetAllAttrs(inlineApplyRecursive(expr.tree)))
   }
 
   /**
@@ -365,55 +360,15 @@ object Macrocosm {
     import c.mirror._
     val util = Util(c)
 
-    val elementVarName = newTermName("$elem")
-    def inlineApplyExpr[B](f: c.Expr[A => B]) =
-      Expr[B](util.inlineApply(f, List(Ident(elementVarName))))
-
-    val okayInline = inlineApplyExpr[Boolean](okay)
-    val nextInline = inlineApplyExpr[A](next)
-    val actInline = inlineApplyExpr[Unit](act)
-
     val t = reify {
-      var $elem: A = zero.eval
-      while(okayInline.eval) {
-        actInline.eval
-        $elem = nextInline.eval
+      var elem: A = zero.eval
+      while(okay.eval(elem)) {
+        act.eval(elem)
+        elem = next.eval(elem)
       }
     }
-    c.Expr[Unit](c.resetAllAttrs(t))
-  }
-
-  /**
-   * Convert a tree:
-   *   `((p1, ..., pn) => <body>)(a1, ..., an)`
-   * to:
-   *   `val p1 = a1; ... val pn = a1; <body>`
-   *
-   * Intended for use in another macro.
-   */
-  def inlineFunctionApply[A](expr: A) = macro inlineFunctionApplyImpl[A]
-
-  def inlineFunctionApplyImpl[A: c.TypeTag]
-                             (c: Context)
-                             (expr: c.Expr[A]): c.Expr[A] = {
-    import c.mirror._
-    val ApplyName = newTermName("apply")
-
-    expr.tree match {
-      case Apply(Select(prefix, ApplyName), args) =>
-        prefix match {
-          case Function(params, body)  =>
-            if (params.length != args.length) sys.error("incorrect arity")
-            // val a = args(0); val b = args(1); ...
-            val paramVals = params.zip(args).map {
-              case (ValDef(_, pName, _, _), a) =>
-                ValDef(Modifiers(), pName, TypeTree(), a)
-            }
-            c.Expr[A](c.resetAllAttrs(Block(paramVals, body)))
-          case _ =>  sys.error("parameter `f` must be a function literal. Found: " + showRaw(prefix))
-        }
-      case _ => sys.error("unexpected tree: " + showRaw(expr.tree))
-    }
+    val t1 = util.inlineApplyRecursive(t)
+    c.Expr[Unit](c.resetAllAttrs(t1))
   }
 
   // //case class Lens[A, B](getter: A => B, setter: (A, B) => A)
@@ -479,6 +434,9 @@ object Macrocosm {
     import context.mirror._
 
     /**
+     * Reursively transforms `tree`, inlining direct function
+     * application.
+     *
      * In:
      * `((p1, p2, ... pN) => <body>).apply(a1, a2, ..., aN)`
      *
@@ -488,18 +446,37 @@ object Macrocosm {
      * <body>
      * ````
      */
-    def inlineApply(f: Tree, args: List[Tree]): Tree = {
-      f match {
-        case Function(params, body)  =>
-          if (params.length != args.length) sys.error("incorrect arity")
-          // val a = args(0); val b = args(1); ...
-          val paramVals = params.zip(args).map {
-            case (ValDef(_, pName, _, _), a) =>
-              ValDef(Modifiers(), pName, TypeTree(), a)
+    def inlineApplyRecursive(tree: Tree): Tree = {
+      import context.mirror._
+      val ApplyName = newTermName("apply")
+
+      object inliner extends Transformer {
+        override def transform(tree: Tree): Tree = {
+          tree match {
+            case ap @ Apply(Select(prefix, ApplyName), args) =>
+              prefix match {
+                case Function(params, body)  =>
+                  if (params.length != args.length) sys.error("incorrect arity")
+                  // val a$0 = args(0); val b$0 = args(1); ...
+                  val paramVals = params.zip(args).map {
+                    case (ValDef(_, pName, _, _), a) =>
+                      ValDef(Modifiers(), newTermName(pName.toString + "$0"), TypeTree(), a)
+                  }
+                  // val a = a$0; val b = b$0
+                  val paramVals2 = params.zip(args).map {
+                    case (ValDef(_, pName, _, _), a) =>
+                      ValDef(Modifiers(), pName, TypeTree(), Ident(newTermName(pName.toString + "$0")))
+                  }
+                  // The nested blocks avoid name clashes.
+                  Block(paramVals, Block(paramVals2, body))
+                case x => ap
+              }
+            case _ => super.transform(tree)
           }
-          Block(paramVals, body)
-        case _ =>  sys.error("parameter `f` must be a function literal.")
+        }
       }
+      val t = inliner.transform(tree)
+      t
     }
   }
 }

@@ -17,7 +17,7 @@ mkir ~/usr
 cp build/pack ~/usr/scala-kepler
 ```
 
-If you choose a different path, edit `build.sbt` in this project to point `scalaHome` to the right place.
+If you choose a different path, edit `build.scala` in this project to point `scalaHome` to the right place.
 
 ### SBT 0.12.0-SNAPSHOT
 
