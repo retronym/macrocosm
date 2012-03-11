@@ -16,6 +16,7 @@ ant all.clean quick.bin
 mkir ~/usr
 cp build/pack ~/usr/scala-kepler
 ```
+Alternatively, use this (unoffical) binary distribution of [2.10.0-M2-0086-g6c988adc5d-2012-03-11](http://dl.dropbox.com/u/106552/scala-kepler.zip)
 
 If you choose a different path, edit `build.scala` in this project to point `scalaHome` to the right place.
 
