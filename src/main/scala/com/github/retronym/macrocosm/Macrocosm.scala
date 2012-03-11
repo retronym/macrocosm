@@ -155,7 +155,7 @@ object Macrocosm {
               val temp: T = subExpr.eval
               println("" + subExprCode.eval + " = " + temp)
               temp
-            }
+            }.tree
           case a @ Select(qual, name) if name.isTermName =>
             val sub = Select(transform(qual), name)
             a.tpe match {
@@ -172,7 +172,7 @@ object Macrocosm {
                   val temp: T = subExpr.eval
                   println("" + subExprCode.eval + " = " + temp)
                   temp
-                }
+                }.tree
             }
           case _ => super.transform(tree)
         }
@@ -381,6 +381,39 @@ object Macrocosm {
       }
     }
     c.Expr[Unit](c.resetAllAttrs(t))
+  }
+
+  /**
+   * Convert a tree:
+   *   `((p1, ..., pn) => <body>)(a1, ..., an)`
+   * to:
+   *   `val p1 = a1; ... val pn = a1; <body>`
+   *
+   * Intended for use in another macro.
+   */
+  def inlineFunctionApply[A](expr: A) = macro inlineFunctionApplyImpl[A]
+
+  def inlineFunctionApplyImpl[A: c.TypeTag]
+                             (c: Context)
+                             (expr: c.Expr[A]): c.Expr[A] = {
+    import c.mirror._
+    val ApplyName = newTermName("apply")
+
+    expr.tree match {
+      case Apply(Select(prefix, ApplyName), args) =>
+        prefix match {
+          case Function(params, body)  =>
+            if (params.length != args.length) sys.error("incorrect arity")
+            // val a = args(0); val b = args(1); ...
+            val paramVals = params.zip(args).map {
+              case (ValDef(_, pName, _, _), a) =>
+                ValDef(Modifiers(), pName, TypeTree(), a)
+            }
+            c.Expr[A](c.resetAllAttrs(Block(paramVals, body)))
+          case _ =>  sys.error("parameter `f` must be a function literal. Found: " + showRaw(prefix))
+        }
+      case _ => sys.error("unexpected tree: " + showRaw(expr.tree))
+    }
   }
 
   // //case class Lens[A, B](getter: A => B, setter: (A, B) => A)
