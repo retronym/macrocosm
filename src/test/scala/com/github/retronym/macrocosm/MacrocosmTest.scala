@@ -36,7 +36,7 @@ object MacrocosmTest extends App {
   iteratorForeach(Iterator(1, 2, 3, 4, 5))(println(_))
 
   case class Thing[A](a: A, b: Int)
-  val thingA = lens[Thing[String]].a(())
+  val thingA = lens[Thing[String]].a
   thingA._1(new Thing("foo", 1)) // foo
   thingA._2(new Thing("foo", 1), "bar") // Thing("bar")
 

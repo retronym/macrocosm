@@ -214,14 +214,14 @@ scala> case class Person(name: String, age: Int)
 defined class Person
 
 scala> val nameLens = lens[Person].name
-dynatype: com.github.retronym.macrocosm.Macrocosm.lens[Person].applyDynamic("name")()
+dynatype: com.github.retronym.macrocosm.Macrocosm.lens[Person].applyDynamic("name")
 TypeApply(Select(Select(Select(Select(Select(Ident(newTermName("com")), newTermName("github")), newTermName("retronym")), newTermName("macrocosm")), newTermName("Macrocosm")), newTermName("lens")), List(TypeTree().setType(Person)))
 nameLens: (Person => String, (Person, String) => Person) = (<function1>,<function2>)
 
 scala> val p = Person("brett", 21)
 p: Person = Person(brett,21)
 
-scala> val nameLens = lens[Person].name(())  // the last argument is a temporary hack.
+scala> val nameLens = lens[Person].name
 dynatype: com.github.retronym.macrocosm.Macrocosm.lens[Person].applyDynamic("name")()
 TypeApply(Select(Select(Select(Select(Select(Ident(newTermName("com")), newTermName("github")), newTermName("retronym")), newTermName("macrocosm")), newTermName("Macrocosm")), newTermName("lens")), List(TypeTree().setType(Person)))
 nameLens: (Person => String, (Person, String) => Person) = (<function1>,<function2>)

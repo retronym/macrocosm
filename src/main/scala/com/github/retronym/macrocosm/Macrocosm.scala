@@ -432,23 +432,15 @@ object Macrocosm {
   def lens[T] = new Lenser[T]
 
   class Lenser[T] extends Dynamic {
-    def applyDynamic(propName: String)(dummy: Any)
+    def applyDynamic(propName: String)()
                      = macro Lenser.applyDynamic[T]
   }
 
-  //
-  // the `dummy` parameter is a workaround for bug in macros.
-  //
-  // scala> object M { def m(a: String)() = macro mImpl[Int]; def mImpl[A: c.TypeTag](c: reflect.makro.Context)(a: c.Expr[String])() = a }
-  // defined module M
-  //
-  // scala> M.m("foo")()<console>:12: error: exception during macro expansion: assertion failed:
-  //
   object Lenser {
     def applyDynamic[T: c.TypeTag]
                     (c: Context)
                     (propName: c.Expr[String])
-                    (dummy: c.Expr[Any])
+                    ()
                      = {
       import c.mirror._
       val util = Util(c); import util._
