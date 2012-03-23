@@ -1,4 +1,4 @@
-An exploration of [Scala macros](http://scala-macros.org).
+An exploration of [Scala macros](http://scalamacros.org/).
 
 This branch has been adapted for the new syntax proposed in [SIP-16](http://docs.scala-lang.org/sips/pending/self-cleaning-macros.html)
 
