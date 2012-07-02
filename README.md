@@ -4,23 +4,7 @@ This branch has been adapted for the new syntax proposed in [SIP-16](http://docs
 
 ## Prerequisites
 
-### SIP-16 reference implementation
-
-Build a local copy of the SIP-16 reference implementation.
-
-```
-cd ~/code
-git clone https://github.com/scalamacros/kepler.git
-git checkout develop
-ant all.clean quick.bin
-mkir ~/usr
-cp build/pack ~/usr/scala-kepler
-```
-Alternatively, use this (unoffical) binary distribution of [2.10.0-M2-0086-g6c988adc5d-2012-03-11](http://dl.dropbox.com/u/106552/scala-kepler.zip)
-
-If you choose a different path, edit `build.scala` in this project to point `scalaHome` to the right place.
-
-### SBT 0.12.0-SNAPSHOT
+### SBT 0.12.0-RC3
 
 Use the latest [launcher](http://repo.typesafe.com/typesafe/ivy-snapshots/org.scala-sbt/launcher/). You probably want to start SBT without using your global `~/.sbt` folder with incompatible plugins.
 
