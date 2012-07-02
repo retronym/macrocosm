@@ -37,8 +37,8 @@ object MacrocosmTest extends App {
 
   case class Thing[A](a: A, b: Int)
   val thingA = lens[Thing[String]].a
-  thingA._1(new Thing("foo", 1)) // foo
-  thingA._2(new Thing("foo", 1), "bar") // Thing("bar")
+  println(thingA._1(new Thing("foo", 1))) // foo
+  println(thingA._2(new Thing("foo", 1), "bar")) // Thing("bar")
 
   // lens[Thing[String]].xxx // error: value xxx is not a member of Thing[String]
 

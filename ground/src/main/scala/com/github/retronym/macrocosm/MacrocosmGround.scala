@@ -1,6 +1,7 @@
 package com.github.retronym.macrocosm
 
-import reflect.makro.Context
+import scala.reflect.makro.Context
+import language.experimental.macros
 
 /**
  * Macros useful in the implementation of other macros.
