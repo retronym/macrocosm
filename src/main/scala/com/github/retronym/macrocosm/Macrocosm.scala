@@ -427,7 +427,7 @@ object Macrocosm {
 
   implicit def Util(context: Context) = new Util[context.type](context)
 
-  class Util[C <: Context with Singleton](val c: C) {
+  class Util[C <: Context](val c: C) {
     import c.universe._
 
     def inlineAndReset[T](expr: c.Expr[T]): c.Expr[T] =
