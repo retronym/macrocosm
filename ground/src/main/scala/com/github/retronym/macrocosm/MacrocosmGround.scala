@@ -1,6 +1,6 @@
 package com.github.retronym.macrocosm
 
-import scala.reflect.makro.Context
+import scala.reflect.macros.Context
 import language.experimental.macros
 
 /**
@@ -12,5 +12,5 @@ import language.experimental.macros
 object MacrocosmGround {
 	def id[A <: AnyRef](a: A): a.type = macro idImpl[a.type]
 
-	def idImpl[A: c.TypeTag](c: Context)(a: c.Expr[A]): c.Expr[A] = a
+	def idImpl[A: c.AbsTypeTag](c: Context)(a: c.Expr[A]): c.Expr[A] = a
 }

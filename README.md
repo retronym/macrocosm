@@ -4,9 +4,9 @@ This branch has been adapted for the new syntax proposed in [SIP-16](http://docs
 
 ## Prerequisites
 
-### SBT 0.12.0-RC3
+### SBT 0.12.0
 
-Use the latest [launcher](http://repo.typesafe.com/typesafe/ivy-snapshots/org.scala-sbt/launcher/). You probably want to start SBT without using your global `~/.sbt` folder with incompatible plugins.
+Use the latest [launcher](http://repo.typesafe.com/typesafe/ivy-snapshots/org.scala-sbt/launcher/). You might want to start SBT without using your global `~/.sbt` folder with incompatible plugins.
 
 The easiest way to obtain the right SBT version, and to use a separate .sbt directory is to use Paul Phillips' [sbt-extras launcher script](https://github.com/paulp/sbt-extras/blob/master/sbt).
 

@@ -1,7 +1,8 @@
 package com.github.retronym.macrocosm
 
-import scala.reflect.makro.Context
+import scala.reflect.macros.Context
 import language.experimental.macros
+import language.dynamics
 
 object Macrocosm {
   /**
@@ -26,7 +27,7 @@ object Macrocosm {
   def assert1Impl(c: Context)(cond: c.Expr[Boolean]) = {
     import c.universe._
     val condCode = c.Expr[String](Literal(Constant(show(cond.tree))))
-    c.reify {
+    c.universe.reify {
       assert(cond.splice, condCode.splice)
       ()
     }
@@ -39,10 +40,10 @@ object Macrocosm {
    */
   def log[A](a: A): A = macro logImpl[A]
 
-  def logImpl[A: c.TypeTag](c: Context)(a: c.Expr[A]): c.Expr[A] = {
+  def logImpl[A: c.AbsTypeTag](c: Context)(a: c.Expr[A]): c.Expr[A] = {
     import c.universe._
     val aCode = c.Expr[String](Literal(Constant(show(a.tree))))
-    c.reify {
+    c.universe.reify {
       val result = a.splice
       println(aCode.splice + " = " + result)
       result
@@ -122,7 +123,7 @@ object Macrocosm {
     s.tree match {
       case Literal(Constant(string: String)) =>
         string.r // just to check
-        c.reify(s.splice.r)
+        c.universe.reify(s.splice.r)
     }
   }
 
@@ -132,7 +133,7 @@ object Macrocosm {
    */
   def trace[A](expr: A) = macro traceImpl[A]
 
-  def traceImpl[A: c.TypeTag](c: Context)(expr: c.Expr[A]): c.Expr[A] = {
+  def traceImpl[A: c.AbsTypeTag](c: Context)(expr: c.Expr[A]): c.Expr[A] = {
     import c.universe._
 
     object tracingTransformer extends Transformer {
@@ -141,7 +142,7 @@ object Macrocosm {
         val exprCode = c.Expr[String](Literal(Constant(show(t))))
         val exprTpe  = c.Expr[String](Literal(Constant(show(t.tpe))))
 
-        (c.reify {
+        (c.universe.reify {
           val result = expr.splice
           println("%s = %s: %s".format(exprCode.splice, result, exprTpe.splice))
           result
@@ -188,47 +189,47 @@ object Macrocosm {
   object NumericOps {
     def +[T](c: Context)(rhs: c.Expr[T]) = {
       val (numeric, lhs) = extractNumericAndLhs[T](c)
-      c.reify(numeric.splice.plus(lhs.splice, rhs.splice))
+      c.universe.reify(numeric.splice.plus(lhs.splice, rhs.splice))
     }
 
     def -[T](c: Context)(rhs: c.Expr[T]) = {
       val (numeric, lhs) = extractNumericAndLhs[T](c)
-      c.reify(numeric.splice.minus(lhs.splice, rhs.splice))
+      c.universe.reify(numeric.splice.minus(lhs.splice, rhs.splice))
     }
 
     def *[T](c: Context)(rhs: c.Expr[T]) = {
       val (numeric, lhs) = extractNumericAndLhs[T](c)
-      c.reify(numeric.splice.times(lhs.splice, rhs.splice))
+      c.universe.reify(numeric.splice.times(lhs.splice, rhs.splice))
     }
 
     def unary_-[T](c: Context)() = {
       val (numeric, lhs) = extractNumericAndLhs[T](c)
-      c.reify(numeric.splice.negate(lhs.splice))
+      c.universe.reify(numeric.splice.negate(lhs.splice))
     }
 
     def abs[T](c: Context)() = {
       val (numeric, lhs) = extractNumericAndLhs[T](c)
-      c.reify(numeric.splice.abs(lhs.splice))
+      c.universe.reify(numeric.splice.abs(lhs.splice))
     }
 
     def signum[T](c: Context)() = {
       val (numeric, lhs) = extractNumericAndLhs[T](c)
-      c.reify(numeric.splice.signum(lhs.splice))
+      c.universe.reify(numeric.splice.signum(lhs.splice))
     }
 
     def toInt[T](c: Context)() = {
       val (numeric, lhs) = extractNumericAndLhs[T](c)
-      c.reify(numeric.splice.toInt(lhs.splice))
+      c.universe.reify(numeric.splice.toInt(lhs.splice))
     }
 
     def toLong[T](c: Context)() = {
       val (numeric, lhs) = extractNumericAndLhs[T](c)
-      c.reify(numeric.splice.toLong(lhs.splice))
+      c.universe.reify(numeric.splice.toLong(lhs.splice))
     }
 
     def toDouble[T](c: Context)() = {
       val (numeric, lhs) = extractNumericAndLhs[T](c)
-      c.reify(numeric.splice.toDouble(lhs.splice))
+      c.universe.reify(numeric.splice.toDouble(lhs.splice))
     }
 
     def extractNumericAndLhs[T](c: Context): (c.Expr[Numeric[T]], c.Expr[T]) = {
@@ -259,13 +260,13 @@ object Macrocosm {
                         (act: A => Unit): Unit =
     macro iteratorForeachImpl[A]
 
-  def iteratorForeachImpl[A: c.TypeTag]
+  def iteratorForeachImpl[A: c.AbsTypeTag]
                          (c: Context)
                          (iterator: c.Expr[Iterator[A]])
                          (act: c.Expr[A => Unit]): c.Expr[Unit] = {
     import c.universe._
 
-    val e = c.reify {
+    val e = c.universe.reify {
       val i = iterator.splice
       while(i.hasNext) {
         val elem = i.next()
@@ -300,13 +301,13 @@ object Macrocosm {
   def arrayForeachWithIndex[A](array: Array[A])(f: (A, Int) => Unit): Unit =
     macro arrayForeachWithIndexImpl[A]
 
-  def arrayForeachWithIndexImpl[A: c.TypeTag]
+  def arrayForeachWithIndexImpl[A: c.AbsTypeTag]
                                (c: Context)
                                (array: c.Expr[Array[A]])
                                (f: c.Expr[(A, Int) => Unit]): c.Expr[Unit] = {
     import c.universe._
 
-    val expr = c.reify {
+    val expr = c.universe.reify {
       val a = array.splice
       var i = 0
       val len = a.length
@@ -340,14 +341,14 @@ object Macrocosm {
   def cfor[A](zero: A)(okay: A => Boolean, next: A => A)(act: A => Unit): Unit =
     macro cforImpl[A]
 
-  def cforImpl[A: c.TypeTag]
+  def cforImpl[A: c.AbsTypeTag]
               (c: Context)
               (zero: c.Expr[A])
               (okay: c.Expr[A => Boolean], next: c.Expr[A => A])
               (act: c.Expr[A => Unit]): c.Expr[Unit] = {
     import c.universe._
 
-    val t = c.reify {
+    val t = c.universe.reify {
       var elem: A = zero.splice
       while(okay.splice(elem)) {
         act.splice(elem)
@@ -378,10 +379,10 @@ object Macrocosm {
   }
 
   object Lenser {
-    def selectDynamic[T: c.TypeTag](c: Context)(propName: c.Expr[String]) =
+    def selectDynamic[T: c.AbsTypeTag](c: Context)(propName: c.Expr[String]) =
       applyDynamic[T](c)(propName)()
 
-    def applyDynamic[T: c.TypeTag]
+    def applyDynamic[T: c.AbsTypeTag]
                     (c: Context)
                     (propName: c.Expr[String])
                     ()
