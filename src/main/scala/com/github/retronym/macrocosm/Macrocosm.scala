@@ -40,7 +40,7 @@ object Macrocosm {
    */
   def log[A](a: A): A = macro logImpl[A]
 
-  def logImpl[A: c.AbsTypeTag](c: Context)(a: c.Expr[A]): c.Expr[A] = {
+  def logImpl[A: c.WeakTypeTag](c: Context)(a: c.Expr[A]): c.Expr[A] = {
     import c.universe._
     val aCode = c.Expr[String](Literal(Constant(show(a.tree))))
     c.universe.reify {
@@ -133,7 +133,7 @@ object Macrocosm {
    */
   def trace[A](expr: A) = macro traceImpl[A]
 
-  def traceImpl[A: c.AbsTypeTag](c: Context)(expr: c.Expr[A]): c.Expr[A] = {
+  def traceImpl[A: c.WeakTypeTag](c: Context)(expr: c.Expr[A]): c.Expr[A] = {
     import c.universe._
 
     object tracingTransformer extends Transformer {
@@ -260,7 +260,7 @@ object Macrocosm {
                         (act: A => Unit): Unit =
     macro iteratorForeachImpl[A]
 
-  def iteratorForeachImpl[A: c.AbsTypeTag]
+  def iteratorForeachImpl[A: c.WeakTypeTag]
                          (c: Context)
                          (iterator: c.Expr[Iterator[A]])
                          (act: c.Expr[A => Unit]): c.Expr[Unit] = {
@@ -301,7 +301,7 @@ object Macrocosm {
   def arrayForeachWithIndex[A](array: Array[A])(f: (A, Int) => Unit): Unit =
     macro arrayForeachWithIndexImpl[A]
 
-  def arrayForeachWithIndexImpl[A: c.AbsTypeTag]
+  def arrayForeachWithIndexImpl[A: c.WeakTypeTag]
                                (c: Context)
                                (array: c.Expr[Array[A]])
                                (f: c.Expr[(A, Int) => Unit]): c.Expr[Unit] = {
@@ -341,7 +341,7 @@ object Macrocosm {
   def cfor[A](zero: A)(okay: A => Boolean, next: A => A)(act: A => Unit): Unit =
     macro cforImpl[A]
 
-  def cforImpl[A: c.AbsTypeTag]
+  def cforImpl[A: c.WeakTypeTag]
               (c: Context)
               (zero: c.Expr[A])
               (okay: c.Expr[A => Boolean], next: c.Expr[A => A])
@@ -379,10 +379,10 @@ object Macrocosm {
   }
 
   object Lenser {
-    def selectDynamic[T: c.AbsTypeTag](c: Context)(propName: c.Expr[String]) =
+    def selectDynamic[T: c.WeakTypeTag](c: Context)(propName: c.Expr[String]) =
       applyDynamic[T](c)(propName)()
 
-    def applyDynamic[T: c.AbsTypeTag]
+    def applyDynamic[T: c.WeakTypeTag]
                     (c: Context)
                     (propName: c.Expr[String])
                     ()
