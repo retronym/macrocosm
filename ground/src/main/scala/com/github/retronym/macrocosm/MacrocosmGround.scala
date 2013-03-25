@@ -12,5 +12,5 @@ import language.experimental.macros
 object MacrocosmGround {
 	def id[A <: AnyRef](a: A): a.type = macro idImpl[a.type]
 
-	def idImpl[A: c.AbsTypeTag](c: Context)(a: c.Expr[A]): c.Expr[A] = a
+	def idImpl[A: c.WeakTypeTag](c: Context)(a: c.Expr[A]): c.Expr[A] = a
 }

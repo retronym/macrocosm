@@ -7,7 +7,7 @@ object build extends Build {
     version := "0.2-SNAPSHOT",
     // scalaHome := Some(file(System.getProperty("user.home")) / "usr" / "scala-kepler"),
     //scalaVersion := "2.10.0-SNAPSHOT",
-    scalaVersion := "2.10.0-M7",
+    scalaVersion := "2.10.1",
     scalacOptions ++= Seq(), // Seq("-Xlog-free-terms", "-unchecked", /*, "-Ymacro-debug"*/),
 		resolvers += "sonatype snapshots" at "https://oss.sonatype.org/content/repositories/snapshots",
     libraryDependencies <+= (scalaVersion)("org.scala-lang" % "scala-compiler" % _)
